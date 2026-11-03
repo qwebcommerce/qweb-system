@@ -2,6 +2,7 @@ import "server-only";
 import { collections } from "@/config/collections";
 import { DEFAULT_COMPANY_NAME, DEFAULT_CURRENCY, DEFAULT_DATE_FORMAT } from "@/config/currency";
 import { getAdminDb, isAdminFirebaseConfigured } from "@/lib/firebase/admin";
+import { live } from "@/server/db";
 import type { CompanySettings, DateFormat } from "@/types";
 
 export const defaultCompanySettings: CompanySettings = {
@@ -18,6 +19,7 @@ export const defaultCompanySettings: CompanySettings = {
 };
 
 export async function getCompanySettings(): Promise<CompanySettings> {
+  await live();
   if (!isAdminFirebaseConfigured()) return defaultCompanySettings;
 
   const snapshot = await getAdminDb().collection(collections.settings).doc("company").get();
@@ -26,6 +28,7 @@ export async function getCompanySettings(): Promise<CompanySettings> {
 }
 
 export async function getBootstrapState(): Promise<"unconfigured" | "open" | "done"> {
+  await live();
   if (!isAdminFirebaseConfigured()) return "unconfigured";
   const snapshot = await getAdminDb().collection(collections.settings).doc("system").get();
   return snapshot.exists && snapshot.data()?.bootstrapped === true ? "done" : "open";

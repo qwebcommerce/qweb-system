@@ -1,4 +1,5 @@
 import "server-only";
+import { connection } from "next/server";
 import {
   FieldValue,
   Timestamp,
@@ -8,6 +9,14 @@ import {
 } from "firebase-admin/firestore";
 import { collections } from "@/config/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
+
+/**
+ * Marks the current render as request-time work.
+ * Firebase Admin draws random bytes, which Next.js refuses during prerender.
+ */
+export async function live() {
+  await connection();
+}
 
 export function database() {
   return getAdminDb();

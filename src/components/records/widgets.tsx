@@ -10,6 +10,7 @@ import { useI18n } from "@/components/providers/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDisplayDate, formatMoney } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { MessageKey } from "@/i18n";
 import type { Locale } from "@/types";
 
@@ -57,8 +58,8 @@ export function EmptyState({ children }: { children: React.ReactNode }) {
   return <p className="rounded-xl bg-card px-4 py-10 text-center text-sm text-muted-foreground ring-1 ring-foreground/10">{children}</p>;
 }
 
-export function Panel({ children }: { children: React.ReactNode }) {
-  return <section className="rounded-xl bg-card p-4 ring-1 ring-foreground/10 md:p-5">{children}</section>;
+export function Panel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <section className={cn("rounded-xl bg-card p-4 ring-1 ring-foreground/10 md:p-5", className)}>{children}</section>;
 }
 
 export function DataTable({ children }: { children: React.ReactNode }) {

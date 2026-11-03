@@ -28,6 +28,7 @@ export type SetupError =
   | "invalid"
   | "secret"
   | "exists"
+  | "auth_disabled"
   | "failed";
 
 export type SetupResult = { ok: true } | { ok: false; error: SetupError };
@@ -139,6 +140,7 @@ export async function createFirstAdministrator(input: {
     }
     const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
     if (code.includes("email-already-exists")) return { ok: false, error: "exists" };
+    if (code.includes("configuration-not-found")) return { ok: false, error: "auth_disabled" };
     return { ok: false, error: "failed" };
   }
 }

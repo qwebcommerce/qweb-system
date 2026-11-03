@@ -5,7 +5,7 @@ import { qatarToday } from "@/lib/dates";
 import { sanitizeHtml } from "@/lib/html";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { can } from "@/config/permissions";
-import { asIso, asNullable, asNumber, asText, database, stamp } from "@/server/db";
+import { asIso, asNullable, asNumber, asText, database, live, stamp } from "@/server/db";
 import { activityRecord } from "@/server/services/activity";
 import { RecordError, staffEmployeeId } from "@/server/services/directory";
 import type { Article, ArticleStatus, Category, LocalizedText, Role, SessionUser, UserProfile } from "@/types";
@@ -34,6 +34,7 @@ function mapCategory(id: string, data: DocumentData): Category {
 }
 
 export async function listCategories(kind: CategoryKind) {
+  await live();
   const snapshot = await database().collection(categoryCollections[kind]).orderBy("sortOrder").limit(200).get();
   return snapshot.docs.map((doc) => mapCategory(doc.id, doc.data()));
 }
@@ -44,6 +45,7 @@ export async function saveCategory(
   input: { name: LocalizedText; active: boolean; sortOrder: number },
   id?: string,
 ) {
+  await live();
   const ref = id ? database().collection(categoryCollections[kind]).doc(id) : database().collection(categoryCollections[kind]).doc();
   await database().runTransaction(async (tx) => {
     const existing = id ? await tx.get(ref) : null;
@@ -70,6 +72,7 @@ export async function saveCategory(
 }
 
 export async function deleteCategory(user: SessionUser, kind: CategoryKind, id: string) {
+  await live();
   const ref = database().collection(categoryCollections[kind]).doc(id);
   const existing = await ref.get();
   if (!existing.exists) throw new RecordError("not_found");
@@ -89,6 +92,7 @@ export async function deleteCategory(user: SessionUser, kind: CategoryKind, id: 
 }
 
 async function categoryInUse(kind: CategoryKind, id: string) {
+  await live();
   const db = database();
   if (kind === "expense") {
     const [expenses, schedules] = await Promise.all([
@@ -125,6 +129,7 @@ function mapUser(id: string, data: DocumentData): UserProfile {
 }
 
 export async function listUsers() {
+  await live();
   const snapshot = await database().collection(collections.users).orderBy("displayName").limit(200).get();
   return snapshot.docs.map((doc) => mapUser(doc.id, doc.data()));
 }
@@ -133,6 +138,7 @@ export async function createManagedUser(
   actor: SessionUser,
   input: { email: string; displayName: string; password: string; role: Role; employeeId: string | null },
 ) {
+  await live();
   const auth = getAdminAuth();
   let uid = "";
   try {
@@ -172,6 +178,7 @@ export async function updateManagedUser(
   id: string,
   input: { displayName: string; role: Role; active: boolean; employeeId: string | null; password?: string },
 ) {
+  await live();
   if (actor.uid === id && (!input.active || input.role !== "administrator")) throw new RecordError("invalid");
   const ref = database().collection(collections.users).doc(id);
   const existing = await ref.get();
@@ -228,11 +235,13 @@ function mapArticle(id: string, data: DocumentData): Article {
 }
 
 export async function listArticles() {
+  await live();
   const snapshot = await database().collection(collections.articles).orderBy("updatedAt", "desc").limit(100).get();
   return snapshot.docs.map((doc) => mapArticle(doc.id, doc.data()));
 }
 
 export async function getArticle(id: string) {
+  await live();
   const snapshot = await database().collection(collections.articles).doc(id).get();
   return snapshot.exists ? mapArticle(snapshot.id, snapshot.data()!) : null;
 }
@@ -249,6 +258,7 @@ export async function saveArticle(
   },
   id?: string,
 ) {
+  await live();
   const ref = id ? database().collection(collections.articles).doc(id) : database().collection(collections.articles).doc();
   const en = cleanContent(input.en);
   const ar = cleanContent(input.ar);
@@ -281,6 +291,7 @@ export async function saveArticle(
 }
 
 export async function listActivity() {
+  await live();
   const snapshot = await database().collection(collections.activityLogs).orderBy("createdAt", "desc").limit(80).get();
   return snapshot.docs.map((doc) => ({
     id: doc.id,
@@ -302,6 +313,7 @@ export interface InboxItem {
 }
 
 export async function loadInbox(user: SessionUser): Promise<InboxItem[]> {
+  await live();
   const today = qatarToday();
   const items: InboxItem[] = [];
   const db = database();
@@ -361,6 +373,7 @@ export async function loadInbox(user: SessionUser): Promise<InboxItem[]> {
 }
 
 export async function dismissInboxItem(user: SessionUser, item: InboxItem) {
+  await live();
   const id = `${user.uid}_${item.dedupeKey}`.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 700);
   await database().collection(collections.notifications).doc(id).set({
     userId: user.uid,
@@ -391,6 +404,7 @@ function slugify(value: string) {
 }
 
 async function assertSlugAvailable(id: string, enSlug: string, arSlug: string) {
+  await live();
   const collection = database().collection(collections.articles);
   const [en, ar] = await Promise.all([
     collection.where("en.slug", "==", enSlug).limit(2).get(),

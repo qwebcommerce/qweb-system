@@ -5,7 +5,7 @@ import { keywords } from "@/lib/keywords";
 import { qatarToday } from "@/lib/dates";
 import { applyAccountEntry, nextDueDate, occurrenceKey, payableTotal } from "@/lib/financial/calculations";
 import { roundMoney } from "@/lib/financial/money";
-import { allocateCode, asIso, asNullable, asNumber, asText, collectDocuments, database, stamp, type Page, PAGE_SIZE } from "@/server/db";
+import { allocateCode, asIso, asNullable, asNumber, asText, collectDocuments, database, live, stamp, type Page, PAGE_SIZE } from "@/server/db";
 import { activityRecord } from "@/server/services/activity";
 import { RecordError, projectFigures } from "@/server/services/directory";
 import type {
@@ -143,6 +143,7 @@ function opposite(direction: "in" | "out"): "in" | "out" {
 }
 
 async function readRefs(tx: Transaction, collectionName: string, ids: Array<string | null | undefined>) {
+  await live();
   const unique = [...new Set(ids.filter((id): id is string => Boolean(id)))];
   const snaps = await Promise.all(unique.map(async (id) => tx.get(database().collection(collectionName).doc(id))));
   return new Map(snaps.filter((snap) => snap.exists).map((snap) => [snap.id, snap]));
@@ -241,6 +242,7 @@ function syncAccount(
 }
 
 export async function refreshOverdueExpenses() {
+  await live();
   const today = qatarToday();
   const due = await expenses().where("status", "==", "pending").where("dueDate", "<", today).limit(100).get();
   if (due.empty) return;
@@ -250,6 +252,7 @@ export async function refreshOverdueExpenses() {
 }
 
 export async function listExpenses(filters: { search?: string; status?: string; cursor?: string | null }): Promise<Page<Expense>> {
+  await live();
   await refreshOverdueExpenses();
   let query = expenses().orderBy("updatedAt", "desc").limit(PAGE_SIZE + 1);
   if (filters.search && filters.search.trim().length >= 2) {
@@ -267,6 +270,7 @@ export async function listExpenses(filters: { search?: string; status?: string; 
 }
 
 export async function expensesFor(field: "projectId" | "clientId", id: string) {
+  await live();
   const snapshot = await expenses().where(field, "==", id).limit(100).get();
   return snapshot.docs.map((doc) => mapExpense(doc.id, doc.data()));
 }
@@ -288,6 +292,7 @@ type ExpenseInput = {
 };
 
 export async function saveExpense(user: SessionUser, input: ExpenseInput, id?: string) {
+  await live();
   const db = database();
   const ref = id ? expenses().doc(id) : expenses().doc();
   await db.runTransaction(async (tx) => {
@@ -357,6 +362,7 @@ export async function saveExpense(user: SessionUser, input: ExpenseInput, id?: s
 }
 
 export async function removeExpense(user: SessionUser, id: string) {
+  await live();
   const existing = await expenses().doc(id).get();
   if (!existing.exists) throw new RecordError("not_found");
   if (existing.data()?.sourceType === "payroll") throw new RecordError("invalid");
@@ -393,11 +399,13 @@ function mapSchedule(id: string, data: DocumentData): RecurringExpense {
 }
 
 export async function listSchedules() {
+  await live();
   const snapshot = await schedules().orderBy("updatedAt", "desc").limit(100).get();
   return snapshot.docs.map((doc) => mapSchedule(doc.id, doc.data()));
 }
 
 export async function saveSchedule(user: SessionUser, input: { categoryId: string; title: string; amount: number; frequency: ScheduleFrequency; startDate: string; endDate: string | null; clientId: string | null; projectId: string | null; defaultPaymentMethod: PaymentMethod | null; notes: string }, id?: string) {
+  await live();
   const ref = id ? schedules().doc(id) : schedules().doc();
   const anchorDay = Number(input.startDate.slice(8, 10));
   await database().runTransaction(async (tx) => {
@@ -419,10 +427,12 @@ export async function saveSchedule(user: SessionUser, input: { categoryId: strin
 }
 
 export async function setScheduleActive(id: string, active: boolean) {
+  await live();
   await schedules().doc(id).update({ active, updatedAt: stamp() });
 }
 
 export async function generateDueOccurrences(user: SessionUser, through = qatarToday()) {
+  await live();
   const active = await schedules().where("active", "==", true).get();
   let created = 0;
   for (const schedule of active.docs) {
@@ -486,6 +496,7 @@ export async function generateDueOccurrences(user: SessionUser, through = qatarT
 }
 
 export async function listRevenue(filters: { search?: string; cursor?: string | null }): Promise<Page<Revenue>> {
+  await live();
   let query = revenue().orderBy("date", "desc").limit(PAGE_SIZE + 1);
   if (filters.search && filters.search.trim().length >= 2) query = revenue().where("keywords", "array-contains", filters.search.trim().toLowerCase().split(/\s+/)[0]!).limit(50);
   if (!filters.search && filters.cursor) {
@@ -498,11 +509,13 @@ export async function listRevenue(filters: { search?: string; cursor?: string | 
 }
 
 export async function revenueFor(field: "projectId" | "clientId", id: string) {
+  await live();
   const snapshot = await revenue().where(field, "==", id).limit(100).get();
   return snapshot.docs.map((doc) => mapRevenue(doc.id, doc.data()));
 }
 
 export async function saveRevenue(user: SessionUser, input: { date: string; clientId: string; projectId: string | null; categoryId: string; description: string; amount: number; paymentMethod: PaymentMethod; notes: string; accountId: string | null; cheque: ChequeDetails | null }, id?: string) {
+  await live();
   const ref = id ? revenue().doc(id) : revenue().doc();
   await database().runTransaction(async (tx) => {
     const existing = id ? await tx.get(ref) : null;
@@ -534,6 +547,7 @@ export async function saveRevenue(user: SessionUser, input: { date: string; clie
 }
 
 export async function cancelRevenue(user: SessionUser, id: string) {
+  await live();
   const existing = await revenue().doc(id).get();
   if (!existing.exists) throw new RecordError("not_found");
   const current = mapRevenue(existing.id, existing.data()!);
@@ -560,11 +574,13 @@ export async function cancelRevenue(user: SessionUser, id: string) {
 }
 
 export async function listAccounts() {
+  await live();
   const snapshot = await accounts().orderBy("name").limit(100).get();
   return snapshot.docs.map((doc) => mapAccount(doc.id, doc.data()));
 }
 
 export async function saveAccount(user: SessionUser, input: { name: string; type: "cash" | "bank"; bankName: string | null; accountNumberLast4: string | null; openingBalance: number; currency: string; notes: string }, id?: string) {
+  await live();
   const ref = id ? accounts().doc(id) : accounts().doc();
   await database().runTransaction(async (tx) => {
     const existing = id ? await tx.get(ref) : null;
@@ -587,12 +603,14 @@ export async function saveAccount(user: SessionUser, input: { name: string; type
 }
 
 export async function listAccountTransactions(accountId?: string) {
+  await live();
   const query = accountId ? accountTxns().where("accountId", "==", accountId).orderBy("date", "desc").limit(50) : accountTxns().orderBy("date", "desc").limit(30);
   const snapshot = await query.get();
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data(), createdAt: asIso(doc.data().createdAt), updatedAt: asIso(doc.data().updatedAt) }) as AccountTransaction);
 }
 
 export async function transferFunds(user: SessionUser, input: { fromAccountId: string; toAccountId: string; amount: number; date: string; notes: string }) {
+  await live();
   if (input.fromAccountId === input.toAccountId) throw new RecordError("invalid");
   const group = database().collection(collections.accountTransactions).doc().id;
   await database().runTransaction(async (tx) => {
@@ -617,12 +635,14 @@ export async function transferFunds(user: SessionUser, input: { fromAccountId: s
 }
 
 export async function listPayroll(month?: string) {
+  await live();
   const query = month ? payroll().where("month", "==", month).limit(200) : payroll().orderBy("month", "desc").limit(50);
   const snapshot = await query.get();
   return snapshot.docs.map((doc) => mapPayroll(doc.id, doc.data()));
 }
 
 export async function generatePayroll(user: SessionUser, month: string) {
+  await live();
   const snapshot = await employees().where("active", "==", true).limit(300).get();
   let created = 0;
   for (const employee of snapshot.docs) {
@@ -667,6 +687,7 @@ export async function generatePayroll(user: SessionUser, month: string) {
 }
 
 export async function updatePayroll(user: SessionUser, id: string, input: { bonuses: Payroll["bonuses"]; deductions: Payroll["deductions"]; adjustments: Payroll["adjustments"]; notes: string }) {
+  await live();
   const ref = payroll().doc(id);
   await database().runTransaction(async (tx) => {
     const existing = await tx.get(ref);
@@ -692,6 +713,7 @@ export async function updatePayroll(user: SessionUser, id: string, input: { bonu
 }
 
 export async function markPayrollPaid(user: SessionUser, id: string, input: { paymentDate: string; paymentMethod: PaymentMethod; accountId: string | null; notes: string }) {
+  await live();
   const expenseRef = expenses().doc(`payroll_${id}`);
   await database().runTransaction(async (tx) => {
     const record = await tx.get(payroll().doc(id));
@@ -744,16 +766,19 @@ export async function markPayrollPaid(user: SessionUser, id: string, input: { pa
 }
 
 export async function expensesForExport(status?: string) {
+  await live();
   await refreshOverdueExpenses();
   const query = status && status !== "all" ? expenses().where("status", "==", status).orderBy("dueDate") : expenses().orderBy("dueDate");
   return collectDocuments(query, (id, data) => mapExpense(id, data), 5000);
 }
 
 export async function revenueForExport() {
+  await live();
   return collectDocuments(revenue().orderBy("date", "desc"), (id, data) => mapRevenue(id, data), 5000);
 }
 
 export async function collectFinancial(collectionName: string) {
+  await live();
   const snapshot = await database().collection(collectionName).limit(2000).get();
   return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 }

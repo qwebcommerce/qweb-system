@@ -3,14 +3,13 @@
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { SIDEBAR_STORAGE_KEY } from "@/config/session";
 import { flattenLinks, pathIsActive, visibleNavigation, type NavLink } from "@/config/navigation";
 import { can } from "@/config/permissions";
-import { useCompany } from "@/components/providers/company-provider";
 import { useI18n } from "@/components/providers/locale-provider";
 import { useCurrentUser } from "@/components/providers/user-provider";
-import { Button } from "@/components/ui/button";
+import { Wordmark } from "@/components/brand/wordmark";
 import { cn } from "@/lib/utils";
 
 export function Sidebar({
@@ -23,7 +22,6 @@ export function Sidebar({
   const pathname = usePathname();
   const { t } = useI18n();
   const user = useCurrentUser();
-  const company = useCompany();
   const collapsed = useSyncExternalStore(subscribeSidebar, readCollapsed, () => false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const entries = visibleNavigation((permission) => can(user.role, permission));
@@ -38,24 +36,29 @@ export function Sidebar({
   return (
     <aside
       className={cn(
-        "flex h-full shrink-0 flex-col border-e border-sidebar-border bg-sidebar text-sidebar-foreground",
-        mobile ? "w-full" : compact ? "w-[4.5rem]" : "w-64",
-        !mobile && "transition-[width] duration-200",
+        "flex h-full shrink-0 flex-col bg-[#0c0505] text-white",
+        mobile ? "w-full" : compact ? "w-[4.75rem]" : "w-[17rem]",
+        !mobile && "border-e border-[#550000]/35 transition-[width] duration-200",
       )}
     >
-      <div className={cn("flex h-16 items-center gap-3 border-b border-sidebar-border px-4", compact && "justify-center px-2")}>
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-semibold text-primary-foreground">
-          Q
+      <div className={cn("relative px-5 pt-5 pb-4", compact && "px-2 pt-4")}>
+        <div className={cn("flex items-center gap-2", compact && "justify-center")}>
+          <Wordmark variant="on-dark" markOnly={compact} className={compact ? "h-9" : "h-8"} />
+          {mobile ? (
+            <button
+              type="button"
+              className="ms-auto inline-flex size-8 items-center justify-center rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+              aria-label={t("common.close")}
+              onClick={onNavigate}
+            >
+              <X className="size-4" />
+            </button>
+          ) : null}
         </div>
-        {!compact ? (
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{company.name}</p>
-            <p className="truncate text-xs text-muted-foreground">{t("common.privateSystem")}</p>
-          </div>
-        ) : null}
+        <div className="pointer-events-none absolute inset-x-5 bottom-0 h-px bg-gradient-to-r from-transparent via-[#550000] to-transparent" />
       </div>
 
-      <nav className="flex-1 space-y-1 overflow-y-auto p-3" aria-label={t("nav.breadcrumb")}>
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4" aria-label={t("nav.breadcrumb")}>
         {entries.map((entry) => {
           if (entry.kind === "link") {
             return (
@@ -73,12 +76,13 @@ export function Sidebar({
           const expanded = openGroups[entry.id] ?? active ?? true;
 
           return (
-            <div key={entry.id} className="space-y-1">
+            <div key={entry.id} className="pt-2">
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-                  compact && "justify-center",
+                  "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-base text-white/55 hover:text-white",
+                  compact && "justify-center px-0 tracking-normal",
+                  active && "text-white/75",
                 )}
                 aria-expanded={compact ? undefined : expanded}
                 title={compact ? t(entry.labelKey) : undefined}
@@ -117,17 +121,19 @@ export function Sidebar({
       </nav>
 
       {!mobile ? (
-        <div className="border-t border-sidebar-border p-3">
-          <Button
+        <div className="border-t border-white/10 p-3">
+          <button
             type="button"
-            variant="ghost"
-            className={cn("w-full", compact && "px-0")}
+            className={cn(
+              "flex h-9 w-full items-center justify-center gap-2 rounded-lg text-sm text-white/55 hover:bg-white/8 hover:text-white",
+              !compact && "justify-start px-2.5",
+            )}
             aria-label={compact ? t("nav.expand") : t("nav.collapse")}
             onClick={toggleCollapsed}
           >
-            {compact ? <PanelLeftOpen className="rtl:scale-x-[-1]" /> : <PanelLeftClose className="rtl:scale-x-[-1]" />}
+            {compact ? <PanelLeftOpen className="size-4 rtl:scale-x-[-1]" /> : <PanelLeftClose className="size-4 rtl:scale-x-[-1]" />}
             {!compact ? <span>{t("nav.collapse")}</span> : null}
-          </Button>
+          </button>
         </div>
       ) : null}
     </aside>
@@ -158,15 +164,15 @@ function SidebarLink({
       title={compact ? t(item.labelKey) : undefined}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm transition-colors",
-        nested && "ps-9",
-        compact && "justify-center ps-2.5",
+        "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-base transition-colors",
+        nested && "ps-8 text-[15px]",
+        compact && "justify-center px-0",
         active
-          ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-          : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          ? "bg-[#550000] font-medium text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/14%)]"
+          : "text-white/68 hover:bg-white/7 hover:text-white",
       )}
     >
-      <Icon className="size-4 shrink-0" />
+      <Icon className={cn("size-4 shrink-0", active ? "text-white" : "text-white/55")} />
       {!compact ? <span className="truncate">{t(item.labelKey)}</span> : null}
     </Link>
   );

@@ -5,11 +5,13 @@ import { redirect } from "next/navigation";
 import { SESSION_COOKIE } from "@/config/session";
 import { getAdminAuth, getAdminDb, isAdminFirebaseConfigured } from "@/lib/firebase/admin";
 import { collections } from "@/config/collections";
+import { live } from "@/server/db";
 import type { Role, SessionUser } from "@/types";
 
 const roles = new Set<Role>(["administrator", "manager", "staff"]);
 
 export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
+  await live();
   if (!isAdminFirebaseConfigured()) return null;
 
   const cookieStore = await cookies();

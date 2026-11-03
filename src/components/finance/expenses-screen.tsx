@@ -96,7 +96,7 @@ export function ExpensesScreen({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("expenses.hint")}</p>
       <Panel>
         <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">

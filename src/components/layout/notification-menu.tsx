@@ -14,7 +14,13 @@ type InboxItem = {
   title: string;
 };
 
-export function NotificationMenu() {
+export function NotificationMenu({
+  className,
+  variant = "outline",
+}: {
+  className?: string;
+  variant?: "outline" | "ghost";
+}) {
   const { t } = useI18n();
   const [items, setItems] = useState<InboxItem[] | null>(null);
 
@@ -31,7 +37,7 @@ export function NotificationMenu() {
 
   return (
     <DropdownMenu onOpenChange={(next) => void open(next)}>
-      <DropdownMenuTrigger render={<Button type="button" variant="outline" size="icon" aria-label={t("common.notifications")} />}>
+      <DropdownMenuTrigger render={<Button type="button" variant={variant} size="icon" className={className} aria-label={t("common.notifications")} />}>
         <Bell />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">

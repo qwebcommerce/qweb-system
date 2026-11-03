@@ -20,7 +20,7 @@ export function CategoriesScreen({ groups }: { groups: Record<CategoryKind, Cate
   const [open, setOpen] = useState(false);
   const rows = groups[kind];
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex flex-wrap gap-2">
         {kinds.map((item) => (
           <Button key={item} type="button" size="sm" variant={kind === item ? "default" : "outline"} onClick={() => setKind(item)}>{t(`categories.${item}`)}</Button>
@@ -79,7 +79,7 @@ export function UsersScreen({ users, employees }: { users: UserProfile[]; employ
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<UserProfile | null>(null);
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex justify-end"><Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>{t("users.add")}</Button></div>
       {users.length === 0 ? <EmptyState>{t("users.empty")}</EmptyState> : (
         <Panel>
@@ -153,24 +153,24 @@ export function ActivityScreen({ rows }: { rows: Array<{ id: string; userName: s
   const { t } = useI18n();
   if (rows.length === 0) return <EmptyState>{t("activity.empty")}</EmptyState>;
   return (
-    <Panel>
+    <Panel className="overflow-hidden p-0 md:p-0">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[40rem] text-sm">
+        <table className="w-full table-fixed border-collapse text-sm">
           <thead>
-            <tr className="text-start text-muted-foreground">
-              <th className="px-2 py-2 font-medium">{t("activity.when")}</th>
-              <th className="px-2 py-2 font-medium">{t("activity.who")}</th>
-              <th className="px-2 py-2 font-medium">{t("activity.module")}</th>
-              <th className="px-2 py-2 font-medium">{t("activity.action")}</th>
+            <tr>
+              <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.when")}</th>
+              <th className="w-[22%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.who")}</th>
+              <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.module")}</th>
+              <th className="w-[42%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.action")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.id} className="border-t border-border">
-                <td className="px-2 py-3"><DateText value={row.createdAt} /></td>
-                <td className="px-2 py-3">{row.userName}</td>
-                <td className="px-2 py-3">{row.module}</td>
-                <td className="px-2 py-3">{row.description}</td>
+              <tr key={row.id} className="border-t border-[#550000]/10">
+                <td className="px-5 py-3 text-start whitespace-nowrap"><DateText value={row.createdAt} /></td>
+                <td className="px-5 py-3 text-start">{row.userName}</td>
+                <td className="px-5 py-3 text-start">{row.module}</td>
+                <td className="px-5 py-3 text-start">{row.description}</td>
               </tr>
             ))}
           </tbody>

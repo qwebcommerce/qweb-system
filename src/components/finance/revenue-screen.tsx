@@ -75,7 +75,7 @@ export function RevenueScreen({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("revenue.hint")}</p>
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" onClick={() => void exportRows()}>{t("common.export")}</Button>

@@ -23,7 +23,7 @@ export function PayrollScreen({ rows, month, accounts }: { rows: Payroll[]; mont
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("payroll.paidHint")}</p>
       <Panel>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); void generate(new FormData(event.currentTarget)); }}>

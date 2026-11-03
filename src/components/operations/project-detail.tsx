@@ -67,7 +67,7 @@ export function ProjectDetail({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="numeric text-sm text-muted-foreground">{project.code}</p>

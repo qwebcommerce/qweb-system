@@ -15,7 +15,7 @@ export function ArticlesScreen({ articles, categories }: { articles: Article[]; 
   const { t, locale } = useI18n();
   const names = new Map(categories.map((category) => [category.id, localizedName(category.name, locale)]));
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{t("articles.hint")}</p>
         <Button render={<Link href="/website/articles/new" />}>{t("articles.add")}</Button>
@@ -74,7 +74,7 @@ export function ArticleEditor({ article, categories }: { article: Article | null
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <p className="text-sm text-muted-foreground">{t("articles.hint")}</p>
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant={language === "en" ? "default" : "outline"} onClick={() => setLanguage("en")}>{t("articles.english")}</Button>

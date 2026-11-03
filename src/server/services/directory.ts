@@ -13,6 +13,7 @@ import {
   asNumber,
   asText,
   database,
+  live,
   stamp,
   type Page,
 } from "@/server/db";
@@ -174,6 +175,7 @@ async function pageOf<T>(
   filters: { search?: string; field?: string; value?: string; cursor?: string | null },
   map: (id: string, data: DocumentData) => T,
 ): Promise<Page<T>> {
+  await live();
   const collection = database().collection(collectionName);
   let query = collection.orderBy("updatedAt", "desc").limit(PAGE_SIZE + 1);
   if (filters.search && filters.search.trim().length >= 2) {
@@ -201,11 +203,13 @@ export function listClients(filters: { search?: string; status?: string; cursor?
 }
 
 export async function getClient(id: string) {
+  await live();
   const snapshot = await clients().doc(id).get();
   return snapshot.exists ? mapClient(snapshot.id, snapshot.data()!) : null;
 }
 
 export async function saveClient(user: SessionUser, input: Omit<Client, "id" | "code" | "createdAt" | "updatedAt" | "createdBy">, id?: string) {
+  await live();
   const db = database();
   const ref = id ? clients().doc(id) : clients().doc();
   await db.runTransaction(async (tx) => {
@@ -254,11 +258,13 @@ export function listEmployees(filters: { search?: string; status?: string; curso
 }
 
 export async function listActiveEmployees() {
+  await live();
   const snapshot = await employees().where("active", "==", true).limit(300).get();
   return snapshot.docs.map((doc) => mapEmployee(doc.id, doc.data())).filter((employee) => employee.workingStatus !== "inactive");
 }
 
 export async function getEmployee(id: string) {
+  await live();
   const snapshot = await employees().doc(id).get();
   return snapshot.exists ? mapEmployee(snapshot.id, snapshot.data()!) : null;
 }
@@ -268,6 +274,7 @@ export async function saveEmployee(
   input: Omit<Employee, "id" | "code" | "createdAt" | "updatedAt" | "createdBy" | "active">,
   id?: string,
 ) {
+  await live();
   const db = database();
   const ref = id ? employees().doc(id) : employees().doc();
   const active = input.workingStatus !== "inactive";
@@ -309,11 +316,13 @@ export function listProjects(filters: { search?: string; status?: string; client
 }
 
 export async function getProject(id: string) {
+  await live();
   const snapshot = await projects().doc(id).get();
   return snapshot.exists ? mapProject(snapshot.id, snapshot.data()!) : null;
 }
 
 export async function projectsForClient(clientId: string) {
+  await live();
   const snapshot = await projects().where("clientId", "==", clientId).limit(100).get();
   return snapshot.docs.map((doc) => mapProject(doc.id, doc.data()));
 }
@@ -334,6 +343,7 @@ export async function saveProject(
   },
   id?: string,
 ) {
+  await live();
   const db = database();
   const ref = id ? projects().doc(id) : projects().doc();
   await db.runTransaction(async (tx) => {
@@ -378,6 +388,7 @@ export async function saveProject(
 }
 
 export async function deleteProject(user: SessionUser, id: string) {
+  await live();
   const db = database();
   const [revenue, expenses, taskSnap] = await Promise.all([
     db.collection(collections.revenue).where("projectId", "==", id).limit(1).get(),
@@ -410,6 +421,7 @@ export async function deleteProject(user: SessionUser, id: string) {
 }
 
 export async function listMembers(projectId: string): Promise<ProjectMember[]> {
+  await live();
   const snapshot = await members().where("projectId", "==", projectId).get();
   return snapshot.docs.map((doc) => ({
     id: doc.id,
@@ -421,6 +433,7 @@ export async function listMembers(projectId: string): Promise<ProjectMember[]> {
 }
 
 export async function assignMember(user: SessionUser, projectId: string, employeeId: string, role: string) {
+  await live();
   const db = database();
   const existing = await members().where("projectId", "==", projectId).get();
   if (existing.docs.some((doc) => doc.data().employeeId === employeeId)) throw new RecordError("conflict");
@@ -438,6 +451,7 @@ export async function assignMember(user: SessionUser, projectId: string, employe
 }
 
 export async function removeMember(user: SessionUser, id: string) {
+  await live();
   const ref = members().doc(id);
   const existing = await ref.get();
   if (!existing.exists) throw new RecordError("not_found");
@@ -454,6 +468,7 @@ export async function removeMember(user: SessionUser, id: string) {
 }
 
 export async function listLabor(projectId: string) {
+  await live();
   const snapshot = await labor().where("projectId", "==", projectId).limit(200).get();
   return snapshot.docs.map((doc) => mapLabor(doc.id, doc.data()));
 }
@@ -463,6 +478,7 @@ export async function saveLabor(
   input: { projectId: string; employeeId: string; date: string; hours: number; hourlyCost: number; description: string; notes: string },
   id?: string,
 ) {
+  await live();
   const db = database();
   const ref = id ? labor().doc(id) : labor().doc();
   const total = laborCost(input.hours, input.hourlyCost);
@@ -494,6 +510,7 @@ export async function saveLabor(
 }
 
 export async function deleteLabor(user: SessionUser, id: string) {
+  await live();
   const db = database();
   await db.runTransaction(async (tx) => {
     const existing = await tx.get(labor().doc(id));
@@ -514,17 +531,20 @@ export async function deleteLabor(user: SessionUser, id: string) {
 }
 
 export async function listTasks(user: SessionUser, filters: { search?: string; status?: string; clientId?: string; assignedToId?: string; cursor?: string | null }) {
+  await live();
   const employeeId = user.role === "staff" ? await staffEmployeeId(user) : filters.assignedToId;
   if (user.role === "staff" && !employeeId) return { items: [], nextCursor: null };
   return pageOf(collections.tasks, { ...filters, field: employeeId ? "assignedToId" : filters.clientId ? "clientId" : "status", value: employeeId || filters.clientId || filters.status }, mapTask);
 }
 
 export async function tasksFor(field: "clientId" | "projectId" | "assignedToId", id: string) {
+  await live();
   const snapshot = await tasks().where(field, "==", id).limit(100).get();
   return snapshot.docs.map((doc) => mapTask(doc.id, doc.data()));
 }
 
 export async function staffEmployeeId(user: SessionUser) {
+  await live();
   if (user.employeeId) return user.employeeId;
   const snapshot = await employees().where("email", "==", user.email).limit(1).get();
   return snapshot.docs[0]?.id ?? null;
@@ -535,6 +555,7 @@ export async function saveTask(
   input: { clientId: string; projectId: string | null; description: string; taskDate: string; givenById: string; assignedToId: string | null; status: TaskStatus; staffNotes: string },
   id?: string,
 ) {
+  await live();
   if (user.role === "staff") {
     if (!id) throw new RecordError("invalid");
     const employeeId = await staffEmployeeId(user);
@@ -584,6 +605,7 @@ export async function saveTask(
 }
 
 export async function deleteTask(user: SessionUser, id: string) {
+  await live();
   if (user.role === "staff") throw new RecordError("invalid");
   const ref = tasks().doc(id);
   const existing = await ref.get();
@@ -601,6 +623,7 @@ export async function deleteTask(user: SessionUser, id: string) {
 }
 
 export async function listPeopleOptions() {
+  await live();
   const [employeeSnap, userSnap] = await Promise.all([
     employees().limit(300).get(),
     users().where("active", "==", true).limit(100).get(),
@@ -612,6 +635,7 @@ export async function listPeopleOptions() {
 }
 
 export async function clientOptions() {
+  await live();
   const snapshot = await clients().orderBy("name").limit(300).get();
   return snapshot.docs.map((doc) => ({
     id: doc.id,
@@ -621,6 +645,7 @@ export async function clientOptions() {
 }
 
 export async function projectOptions() {
+  await live();
   const snapshot = await projects().orderBy("title").limit(200).get();
   return snapshot.docs.map((doc) => ({
     id: doc.id,
@@ -634,6 +659,7 @@ export async function listTaskBoard(
   user: SessionUser,
   filter: "today" | "upcoming" | "overdue" | "mine" | "all" | "completed",
 ) {
+  await live();
   const scoped = user.role === "staff" || filter === "mine";
   const employeeId = scoped ? await staffEmployeeId(user) : null;
   if (scoped && !employeeId) return [];

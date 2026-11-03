@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, IBM_Plex_Sans_Arabic } from "next/font/google";
+import { Geist_Mono, IBM_Plex_Sans_Arabic, NTR } from "next/font/google";
 import { AppProviders } from "@/components/providers/app-providers";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const ntr = NTR({
+  variable: "--font-ntr",
   subsets: ["latin"],
+  weight: "400",
 });
 
 const geistMono = Geist_Mono({
@@ -25,6 +26,10 @@ export const metadata: Metadata = {
     template: "%s · Qweb",
   },
   description: "Private company management system",
+  icons: {
+    icon: "/brand/mark.png",
+    apple: "/brand/mark.png",
+  },
 };
 
 const localeBootScript = `try{var l=localStorage.getItem("qweb-locale");var h=document.documentElement;if(l==="ar"){h.lang="ar";h.dir="rtl"}else{h.lang="en";h.dir="ltr"}}catch(e){}`;
@@ -35,7 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       dir="ltr"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${arabic.variable} h-full antialiased`}
+      className={`${ntr.variable} ${geistMono.variable} ${arabic.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-background text-foreground">
         <script dangerouslySetInnerHTML={{ __html: localeBootScript }} />

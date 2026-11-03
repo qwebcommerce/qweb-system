@@ -2,6 +2,7 @@ import "server-only";
 import { FieldValue } from "firebase-admin/firestore";
 import { collections } from "@/config/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
+import { live } from "@/server/db";
 import type { ActivityModule } from "@/types";
 
 const sensitiveKeys = new Set([
@@ -52,5 +53,6 @@ export function activityRecord(input: {
 export async function recordActivity(
   input: Parameters<typeof activityRecord>[0],
 ): Promise<void> {
+  await live();
   await getAdminDb().collection(collections.activityLogs).add(activityRecord(input));
 }

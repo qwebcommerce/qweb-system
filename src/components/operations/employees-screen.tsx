@@ -52,7 +52,7 @@ export function EmployeesScreen({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <p className="text-sm text-muted-foreground">{t("employees.inactiveHint")}</p>
       <Panel>
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

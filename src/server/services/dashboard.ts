@@ -13,7 +13,7 @@ import {
   type CompanyLedgerRecord,
 } from "@/lib/financial/calculations";
 import { roundMoney } from "@/lib/financial/money";
-import { asNullable, asNumber, asText, collectDocuments, database } from "@/server/db";
+import { asIso, asNullable, asNumber, asText, collectDocuments, database, live } from "@/server/db";
 import { staffEmployeeId } from "@/server/services/directory";
 import type { SessionUser, TaskStatus } from "@/types";
 
@@ -29,12 +29,17 @@ export interface DashboardData {
   kind: "staff" | "finance";
   range: { from: string; to: string };
   tasks: DashboardTask[];
-  figures: { revenue: number; expenses: number; profit: number; outstanding: number } | null;
+  figures: { revenue: number; expenses: number; profit: number; outstanding: number; pending: number; projected: number; labor: number; payroll: number } | null;
+  cash: { cash: number; bank: number; available: number } | null;
   chart: Array<{ month: string; revenue: number; expenses: number }>;
   breakdown: Array<{ key: "salary" | "project" | "operational" | "other"; amount: number }>;
   recent: Array<{ id: string; kind: "revenue" | "expense"; title: string; amount: number; date: string }>;
   upcoming: Array<{ id: string; title: string; amount: number; dueDate: string; status: string }>;
   delayed: Array<{ id: string; title: string; date: string }>;
+  accounts: Array<{ id: string; name: string; type: "cash" | "bank"; balance: number }>;
+  projects: Array<{ id: string; title: string; expenses: number; labor: number; profit: number }>;
+  laborByEmployee: Array<{ id: string; name: string; hours: number; cost: number }>;
+  activity: Array<{ id: string; description: string; createdAt: string; module: string }>;
   reconciliation: Array<{ code: "payroll_missing_expense" | "missing_account" | "balance_mismatch" | "duplicate_key"; count: number }>;
 }
 
@@ -43,6 +48,7 @@ export async function loadDashboard(
   period: Period,
   custom?: { from?: string; to?: string },
 ): Promise<DashboardData> {
+  await live();
   const range = periodRange(period, custom);
   const tasks = await loadTasks(user);
   if (!can(user.role, "finance.view")) {
@@ -51,17 +57,22 @@ export async function loadDashboard(
       range,
       tasks,
       figures: null,
+      cash: null,
       chart: [],
       breakdown: [],
       recent: [],
       upcoming: [],
       delayed: [],
+      accounts: [],
+      projects: [],
+      laborByEmployee: [],
+      activity: [],
       reconciliation: [],
     };
   }
 
   const db = database();
-  const [expenseDocs, revenueDocs, projectDocs, payrollDocs, accountDocs, transactionDocs, categoryDocs] = await Promise.all([
+  const [expenseDocs, revenueDocs, projectDocs, payrollDocs, accountDocs, transactionDocs, categoryDocs, laborDocs, employeeDocs, activitySnap] = await Promise.all([
     collectDocuments(db.collection(collections.expenses).orderBy("updatedAt", "desc"), row),
     collectDocuments(db.collection(collections.revenue).orderBy("date", "desc"), row),
     collectDocuments(db.collection(collections.projects).orderBy("updatedAt", "desc"), row),
@@ -69,6 +80,9 @@ export async function loadDashboard(
     collectDocuments(db.collection(collections.accounts), row),
     collectDocuments(db.collection(collections.accountTransactions), row),
     db.collection(collections.expenseCategories).get(),
+    collectDocuments(db.collection(collections.laborAllocations), row),
+    collectDocuments(db.collection(collections.employees), row),
+    db.collection(collections.activityLogs).orderBy("createdAt", "desc").limit(12).get(),
   ]);
 
   const systemKey = new Map(categoryDocs.docs.map((doc) => [doc.id, asNullable(doc.data().systemKey)]));
@@ -107,7 +121,24 @@ export async function loadDashboard(
   }
   const today = qatarToday();
   const soon = addIsoDays(today, 14);
-  const outstandingProjects = projectDocs.filter((doc) => doc.status !== "cancelled" && asNumber(doc.contractBalance) > 0);
+  const openProjects = projectDocs.filter((doc) => doc.status !== "cancelled");
+  const activeAccounts = accountDocs.filter((doc) => doc.status !== "inactive");
+  const cashBalance = roundMoney(sum(activeAccounts.filter((doc) => doc.type === "cash").map((doc) => asNumber(doc.currentBalance))));
+  const bankBalance = roundMoney(sum(activeAccounts.filter((doc) => doc.type === "bank").map((doc) => asNumber(doc.currentBalance))));
+  const names = new Map(employeeDocs.map((doc) => [doc.id, asText(doc.fullName) || doc.id]));
+  const laborGroups = new Map<string, { hours: number; cost: number }>();
+  for (const doc of laborDocs) {
+    const date = asText(doc.date);
+    if (date < range.from || date > range.to) continue;
+    const id = asText(doc.employeeId);
+    const current = laborGroups.get(id) ?? { hours: 0, cost: 0 };
+    current.hours = roundMoney(current.hours + asNumber(doc.hours));
+    current.cost = roundMoney(current.cost + asNumber(doc.totalCost));
+    laborGroups.set(id, current);
+  }
+  const laborByEmployee = [...laborGroups.entries()]
+    .map(([id, value]) => ({ id, name: names.get(id) ?? id, hours: value.hours, cost: value.cost }))
+    .sort((a, b) => b.cost - a.cost);
 
   return {
     kind: "finance",
@@ -117,8 +148,13 @@ export async function loadDashboard(
       revenue,
       expenses,
       profit: companyProfit(revenue, expenses),
-      outstanding: roundMoney(sum(outstandingProjects.map((doc) => asNumber(doc.contractBalance)))),
+      outstanding: roundMoney(sum(openProjects.filter((doc) => asNumber(doc.contractBalance) > 0).map((doc) => asNumber(doc.contractBalance)))),
+      pending: roundMoney(sum(expenseDocs.filter((doc) => (doc.status === "pending" || doc.status === "overdue") && inRange(doc.dueDate)).map((doc) => asNumber(doc.amount)))),
+      projected: roundMoney(sum(openProjects.map((doc) => asNumber(doc.netProfit)))),
+      labor: roundMoney(sum(laborByEmployee.map((item) => item.cost))),
+      payroll: roundMoney(sum(payrollDocs.filter((doc) => doc.status === "paid" && inRange(doc.paymentDate)).map((doc) => asNumber(doc.totalPayable)))),
     },
+    cash: { cash: cashBalance, bank: bankBalance, available: roundMoney(cashBalance + bankBalance) },
     chart,
     breakdown: (Object.keys(buckets) as Array<keyof typeof buckets>).map((key) => ({ key, amount: buckets[key] })),
     recent: [
@@ -136,6 +172,28 @@ export async function loadDashboard(
       .filter((doc) => doc.status !== "completed" && doc.status !== "cancelled" && asText(doc.plannedDeliveryDate) && asText(doc.plannedDeliveryDate) < today)
       .slice(0, 6)
       .map((doc) => ({ id: doc.id, title: asText(doc.title), date: asText(doc.plannedDeliveryDate) })),
+    accounts: activeAccounts.map((doc) => ({
+      id: doc.id,
+      name: asText(doc.name),
+      type: doc.type === "bank" ? "bank" as const : "cash" as const,
+      balance: asNumber(doc.currentBalance),
+    })),
+    projects: openProjects
+      .map((doc) => ({
+        id: doc.id,
+        title: asText(doc.title),
+        expenses: asNumber(doc.totalExpenses),
+        labor: asNumber(doc.laborCost),
+        profit: asNumber(doc.netProfit),
+      }))
+      .sort((a, b) => b.profit - a.profit),
+    laborByEmployee,
+    activity: activitySnap.docs.map((doc) => ({
+      id: doc.id,
+      description: asText(doc.data().description),
+      createdAt: asIso(doc.data().createdAt),
+      module: asText(doc.data().module),
+    })),
     reconciliation: reconcile(payrollDocs, expenseDocs, revenueDocs, accountDocs, transactionDocs),
   };
 }
@@ -154,6 +212,7 @@ function sum(values: number[]) {
 }
 
 async function loadTasks(user: SessionUser): Promise<DashboardTask[]> {
+  await live();
   const employeeId = user.role === "staff" ? await staffEmployeeId(user) : null;
   if (user.role === "staff" && !employeeId) return [];
   const query = employeeId

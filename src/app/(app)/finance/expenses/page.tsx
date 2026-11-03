@@ -1,9 +1,22 @@
+import { Suspense } from "react";
 import { ExpensesScreen } from "@/components/finance/expenses-screen";
 import { listCategories } from "@/server/services/content";
 import { clientOptions, projectOptions } from "@/server/services/directory";
 import { listAccounts, listExpenses, listSchedules } from "@/server/services/finance";
 
-export default async function ExpensesPage({
+export default function ExpensesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; status?: string; cursor?: string }>;
+}) {
+  return (
+    <Suspense fallback={null}>
+      <ExpensesContent searchParams={searchParams} />
+    </Suspense>
+  );
+}
+
+async function ExpensesContent({
   searchParams,
 }: {
   searchParams: Promise<{ q?: string; status?: string; cursor?: string }>;

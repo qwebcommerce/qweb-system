@@ -13,7 +13,7 @@ export function ModulePending({
   const { t } = useI18n();
 
   return (
-    <section className="mx-auto max-w-3xl rounded-xl bg-card p-6 ring-1 ring-foreground/10">
+    <section className="w-full rounded-xl bg-card p-6 ring-1 ring-foreground/10">
       <p className="text-sm font-medium text-primary">{t("common.phase", { phase })}</p>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{t(descriptionKey)}</p>
       <p className="mt-3 text-sm leading-6 text-muted-foreground">{t("modules.pending", { phase })}</p>

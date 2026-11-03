@@ -11,8 +11,8 @@ export function DashboardHome() {
   const links = pageLinksFor(user.role).filter((link) => link.href !== "/dashboard");
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-      <section className="max-w-3xl">
+    <div className="flex w-full flex-col gap-8">
+      <section>
         <h2 className="text-2xl font-semibold tracking-tight">
           {t("dashboard.welcome", { name: user.displayName })}
         </h2>

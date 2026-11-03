@@ -64,7 +64,7 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6">
       <section className="rounded-xl bg-card p-5 ring-1 ring-foreground/10">
         <h2 className="text-base font-semibold">{t("settings.preferences")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{t("settings.languageHint")}</p>

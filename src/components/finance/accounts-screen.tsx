@@ -16,7 +16,7 @@ export function AccountsScreen({ accounts, transactions }: { accounts: CashAccou
   const [transfer, setTransfer] = useState(false);
   const [editing, setEditing] = useState<CashAccount | null>(null);
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("accounts.transferHint")}</p>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="outline" onClick={() => setTransfer(true)}>{t("accounts.transfer")}</Button>

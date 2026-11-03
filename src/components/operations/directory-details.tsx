@@ -24,7 +24,7 @@ export function ClientDetail({
   const [tab, setTab] = useState<"overview" | "projects" | "revenue" | "tasks" | "notes">("overview");
   const [editing, setEditing] = useState(false);
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="numeric text-sm text-muted-foreground">{client.code}</p>
@@ -78,7 +78,7 @@ export function EmployeeDetail({ employee, tasks }: { employee: Employee; tasks:
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+    <div className="flex w-full flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="numeric text-sm text-muted-foreground">{employee.code}</p>

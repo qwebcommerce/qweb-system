@@ -28,6 +28,7 @@ const errorKeys: Record<SetupError, MessageKey> = {
   invalid: "validation.required",
   secret: "auth.invalidSecret",
   exists: "auth.emailInUse",
+  auth_disabled: "auth.authDisabled",
   failed: "auth.setupFailed",
 };
 
