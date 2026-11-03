@@ -1,0 +1,146 @@
+rules_version = '2';
+
+// Client writes are denied. Privileged changes go through the server and the
+// Admin SDK, which bypasses these rules. The rules still protect every read.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function active() {
+      return signedIn()
+        && request.auth.token.active == true
+        && request.auth.token.role is string;
+    }
+
+    function isAdmin() {
+      return active() && request.auth.token.role == "administrator";
+    }
+
+    function isManager() {
+      return active() && request.auth.token.role == "manager";
+    }
+
+    function isStaff() {
+      return active() && request.auth.token.role == "staff";
+    }
+
+    function isFinance() {
+      return isAdmin() || isManager();
+    }
+
+    match /users/{userId} {
+      allow read: if active() && (request.auth.uid == userId || isAdmin() || isManager());
+      allow write: if false;
+    }
+
+    match /settings/{docId} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /counters/{docId} {
+      allow read, write: if false;
+    }
+
+    match /activityLogs/{logId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /employees/{employeeId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /clients/{clientId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /projects/{projectId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /projectMembers/{memberId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /laborAllocations/{allocationId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /expenses/{expenseId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /recurringExpenses/{scheduleId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /revenue/{revenueId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /payroll/{payrollId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /accounts/{accountId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /accountTransactions/{transactionId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /tasks/{taskId} {
+      allow read: if isFinance()
+        || (isStaff() && resource.data.assignedToId == request.auth.token.employeeId);
+      allow write: if false;
+    }
+
+    match /articles/{articleId} {
+      allow read: if isFinance();
+      allow write: if false;
+    }
+
+    match /expenseCategories/{categoryId} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /revenueCategories/{categoryId} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /projectTypes/{typeId} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /articleCategories/{categoryId} {
+      allow read: if active();
+      allow write: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if active() && resource.data.userId == request.auth.uid;
+      allow update: if active()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read", "dismissed"]);
+      allow create, delete: if false;
+    }
+  }
+}

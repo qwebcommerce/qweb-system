@@ -1,0 +1,26 @@
+export const collections = {
+  users: "users",
+  employees: "employees",
+  clients: "clients",
+  projects: "projects",
+  projectMembers: "projectMembers",
+  laborAllocations: "laborAllocations",
+  expenses: "expenses",
+  recurringExpenses: "recurringExpenses",
+  revenue: "revenue",
+  payroll: "payroll",
+  tasks: "tasks",
+  articles: "articles",
+  expenseCategories: "expenseCategories",
+  revenueCategories: "revenueCategories",
+  projectTypes: "projectTypes",
+  articleCategories: "articleCategories",
+  accounts: "accounts",
+  accountTransactions: "accountTransactions",
+  settings: "settings",
+  notifications: "notifications",
+  activityLogs: "activityLogs",
+  counters: "counters",
+} as const;
+
+export type CollectionName = (typeof collections)[keyof typeof collections];
