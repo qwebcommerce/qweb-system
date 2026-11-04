@@ -17,8 +17,10 @@ export async function POST(request: Request) {
   const idToken = body?.idToken;
   if (!idToken) return NextResponse.json({ error: "invalid" }, { status: 400 });
 
+  let step = "verify";
   try {
     const decoded = await getAdminAuth().verifyIdToken(idToken);
+    step = "profile";
     const snapshot = await getAdminDb().collection(collections.users).doc(decoded.uid).get();
     const profile = snapshot.data();
     const claimRole = decoded.role;
@@ -33,6 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "unauthorized" }, { status: 403 });
     }
 
+    step = "session";
     const session = await getAdminAuth().createSessionCookie(idToken, {
       expiresIn: SESSION_MAX_AGE_SECONDS * 1000,
     });
@@ -47,8 +50,9 @@ export async function POST(request: Request) {
     });
     return response;
   } catch (error) {
-    console.error("session", error instanceof Error ? error.name : "failed");
-    return NextResponse.json({ error: "invalid" }, { status: 401 });
+    const code = error && typeof error === "object" && "code" in error ? String(error.code) : error instanceof Error ? error.name : "failed";
+    console.error("session", step, code);
+    return NextResponse.json({ error: "invalid", step, code }, { status: 401 });
   }
 }
 

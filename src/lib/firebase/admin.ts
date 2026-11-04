@@ -28,6 +28,15 @@ function parseServiceAccount(raw: string): ServiceAccountFile {
   }
 }
 
+function normalizePrivateKey(key: string): string {
+  const unescaped = key.replace(/\\n/g, "\n").trim();
+  if (unescaped.includes("\n")) return unescaped;
+  const match = unescaped.match(/^-----BEGIN ([A-Z ]+)-----([A-Za-z0-9+/=]+)-----END \1-----$/);
+  if (!match) return unescaped;
+  const body = match[2].match(/.{1,64}/g)?.join("\n") ?? match[2];
+  return `-----BEGIN ${match[1]}-----\n${body}\n-----END ${match[1]}-----\n`;
+}
+
 function readServiceAccount(): ServiceAccount | null {
   const raw = process.env.FIREBASE_ADMIN_CONFIG?.trim().replace(/^['"]|['"]$/g, "");
   if (!raw) return null;
@@ -38,7 +47,7 @@ function readServiceAccount(): ServiceAccount | null {
     return {
       projectId: parsed.project_id,
       clientEmail: parsed.client_email,
-      privateKey: parsed.private_key.replace(/\\n/g, "\n"),
+      privateKey: normalizePrivateKey(parsed.private_key),
     };
   } catch {
     return null;

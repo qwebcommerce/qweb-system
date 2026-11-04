@@ -48,9 +48,13 @@ export function LoginForm() {
       if (!response.ok) {
         const { signOut } = await import("firebase/auth");
         await signOut(getClientAuth());
-        const payload = (await response.json().catch(() => null)) as { error?: string } | null;
+        const payload = (await response.json().catch(() => null)) as { error?: string; step?: string; code?: string } | null;
         setFormError(
-          payload?.error === "unauthorized" ? t("auth.unauthorized") : t("auth.invalidCredentials"),
+          payload?.error === "unauthorized"
+            ? t("auth.unauthorized")
+            : payload?.step
+              ? `${t("auth.invalidCredentials")} (${payload.step}${payload.code ? `: ${payload.code}` : ""})`
+              : t("auth.invalidCredentials"),
         );
         return;
       }
