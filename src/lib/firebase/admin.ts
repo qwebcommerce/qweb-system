@@ -1,19 +1,12 @@
 import "server-only";
-import { createRequire } from "node:module";
-import path from "node:path";
-import type { App, ServiceAccount } from "firebase-admin/app";
-import type { Auth } from "firebase-admin/auth";
-import type { Firestore } from "firebase-admin/firestore";
+import { cert, getApps, initializeApp, type App, type ServiceAccount } from "firebase-admin/app";
+import { getAuth, type Auth } from "firebase-admin/auth";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
 
 interface ServiceAccountFile {
   project_id?: string;
   client_email?: string;
   private_key?: string;
-}
-
-function load(name: string) {
-  const require = createRequire(path.join(process.cwd(), "package.json"));
-  return require(name);
 }
 
 function parseServiceAccount(raw: string): ServiceAccountFile {
@@ -54,28 +47,11 @@ function readServiceAccount(): ServiceAccount | null {
   }
 }
 
-function firebaseAppModule(): {
-  cert: (account: ServiceAccount) => object;
-  getApps: () => App[];
-  initializeApp: (options: { credential: object }) => App;
-} {
-  return load("firebase-admin/app");
-}
-
-function firebaseAuthModule(): { getAuth: (app: App) => Auth } {
-  return load("firebase-admin/auth");
-}
-
-function firebaseFirestoreModule(): { getFirestore: (app: App) => Firestore } {
-  return load("firebase-admin/firestore");
-}
-
 export function isAdminFirebaseConfigured(): boolean {
   return readServiceAccount() !== null;
 }
 
 function getAdminApp(): App {
-  const { getApps, initializeApp, cert } = firebaseAppModule();
   if (getApps().length > 0) return getApps()[0]!;
   const serviceAccount = readServiceAccount();
   if (!serviceAccount) {
@@ -88,9 +64,9 @@ function getAdminApp(): App {
 }
 
 export function getAdminAuth(): Auth {
-  return firebaseAuthModule().getAuth(getAdminApp());
+  return getAuth(getAdminApp());
 }
 
 export function getAdminDb(): Firestore {
-  return firebaseFirestoreModule().getFirestore(getAdminApp());
+  return getFirestore(getAdminApp());
 }
