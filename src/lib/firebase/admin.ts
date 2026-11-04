@@ -1,7 +1,8 @@
 import "server-only";
-import { createRequire } from "node:module";
+import { createRequire, Module } from "node:module";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { App, ServiceAccount } from "firebase-admin/app";
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
@@ -41,14 +42,42 @@ function firebasePackageRequire() {
   throw new Error("firebase-admin is not installed on the server.");
 }
 
-function loadInstalledModules(): [AppModule, AuthModule, FirestoreModule] {
-  const nodeRequire = firebasePackageRequire();
+const esmRequirePath = /require\(\) of ES Module (.+?) from /;
+
+function readInstalledModules(nodeRequire: NodeRequire): [AppModule, AuthModule, FirestoreModule] {
   const name = "firebase-admin";
   return [
     nodeRequire(`${name}/app`),
     nodeRequire(`${name}/auth`),
     nodeRequire(`${name}/firestore`),
   ];
+}
+
+const importModule = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
+
+async function seedEsmForRequire(nodeRequire: NodeRequire, filename: string) {
+  const imported = await importModule(pathToFileURL(filename).href);
+  const cached = new Module(filename);
+  cached.filename = filename;
+  cached.loaded = true;
+  cached.exports = imported;
+  nodeRequire.cache[filename] = cached;
+}
+
+async function loadInstalledModules(): Promise<[AppModule, AuthModule, FirestoreModule]> {
+  const nodeRequire = firebasePackageRequire();
+  const seeded = new Set<string>();
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      return readInstalledModules(nodeRequire);
+    } catch (error) {
+      const filename = error instanceof Error ? error.message.match(esmRequirePath)?.[1] : undefined;
+      if (!filename || seeded.has(filename)) throw error;
+      seeded.add(filename);
+      await seedEsmForRequire(nodeRequire, filename);
+    }
+  }
+  throw new Error("firebase-admin could not be loaded.");
 }
 
 async function loadBundledModules(): Promise<[AppModule, AuthModule, FirestoreModule]> {
@@ -105,7 +134,7 @@ export async function readyFirebase(): Promise<ReadyAdmin> {
   if (globalAdmin.__qwebAdmin) return globalAdmin.__qwebAdmin;
   let modules: [AppModule, AuthModule, FirestoreModule];
   try {
-    modules = loadInstalledModules();
+    modules = await loadInstalledModules();
   } catch (installedError) {
     try {
       modules = await loadBundledModules();
