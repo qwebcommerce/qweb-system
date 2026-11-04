@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useForm } from "react-hook-form";
@@ -29,6 +29,10 @@ export function LoginForm() {
     resolver: zodResolver(schema),
     defaultValues: { email: "", password: "" },
   });
+
+  useEffect(() => {
+    form.reset({ email: "", password: "" });
+  }, [form]);
 
   async function onSubmit(values: LoginValues) {
     setFormError(null);
@@ -64,6 +68,7 @@ export function LoginForm() {
         return;
       }
 
+      form.reset({ email: "", password: "" });
       router.push("/dashboard");
       router.refresh();
     } catch (error) {
@@ -84,13 +89,13 @@ export function LoginForm() {
   }
 
   return (
-    <form className="space-y-4" onSubmit={form.handleSubmit(onSubmit)} noValidate>
+    <form className="space-y-4" autoComplete="off" onSubmit={form.handleSubmit(onSubmit)} noValidate>
       <div className="space-y-2">
         <Label htmlFor="email">{t("common.email")}</Label>
         <Input
           id="email"
           type="email"
-          autoComplete="username"
+          autoComplete="off"
           className="h-10"
           aria-invalid={Boolean(form.formState.errors.email)}
           {...form.register("email")}
@@ -104,7 +109,7 @@ export function LoginForm() {
         <Input
           id="password"
           type="password"
-          autoComplete="current-password"
+          autoComplete="off"
           className="h-10"
           aria-invalid={Boolean(form.formState.errors.password)}
           {...form.register("password")}
