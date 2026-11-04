@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { createUserAction, deleteCategoryAction, saveCategoryAction, updateUserAction } from "@/server/actions/content";
+import { createUserAction, deleteCategoryAction, deleteUserAction, saveCategoryAction, updateUserAction } from "@/server/actions/content";
 import { useCurrentUser } from "@/components/providers/user-provider";
 import { useI18n } from "@/components/providers/locale-provider";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DateText, DialogActions, EditorDialog, EmptyState, Field, Panel, StatusBadge, controlClass, localizedName, useSavedRefresh } from "@/components/records/widgets";
 import type { Category, Employee, Role, UserProfile } from "@/types";
@@ -51,22 +52,18 @@ function CategoryForm({ kind, category, onClose }: { kind: CategoryKind; categor
   const { error, finish } = useSavedRefresh();
   const [nameEn, setNameEn] = useState(category?.name.en ?? "");
   const [nameAr, setNameAr] = useState(category?.name.ar ?? "");
-  const [active, setActive] = useState(category?.active ?? true);
-  const [sortOrder, setSortOrder] = useState(category?.sortOrder ?? 100);
   const [pending, setPending] = useState(false);
   return (
     <EditorDialog open title={category ? t("categories.edit") : t("categories.add")} onClose={onClose}>
       <form className="grid gap-4" onSubmit={async (event) => {
         event.preventDefault();
         setPending(true);
-        const result = await saveCategoryAction({ kind, nameEn, nameAr, active, sortOrder }, category?.id);
+        const result = await saveCategoryAction({ kind, nameEn, nameAr }, category?.id);
         setPending(false);
         await finish(result, onClose);
       }}>
         <Field label={t("fields.englishName")}><Input className="h-10" value={nameEn} onChange={(event) => setNameEn(event.target.value)} required /></Field>
         <Field label={t("fields.arabicName")}><Input className="h-10" value={nameAr} onChange={(event) => setNameAr(event.target.value)} required /></Field>
-        <Field label={t("fields.sortOrder")}><Input className="numeric h-10" type="number" value={sortOrder} onChange={(event) => setSortOrder(Number(event.target.value))} /></Field>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} />{t("fields.active")}</label>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <DialogActions pending={pending} onCancel={onClose} />
       </form>
@@ -76,28 +73,77 @@ function CategoryForm({ kind, category, onClose }: { kind: CategoryKind; categor
 
 export function UsersScreen({ users, employees }: { users: UserProfile[]; employees: Employee[] }) {
   const { t } = useI18n();
+  const current = useCurrentUser();
+  const { error, finish } = useSavedRefresh();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<UserProfile | null>(null);
+  const [removing, setRemoving] = useState<UserProfile | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
+
+  function edit(user: UserProfile | null) {
+    setEditing(user);
+    setOpen(true);
+  }
+
+  async function remove() {
+    if (!removing || removing.uid === current.uid) return;
+    setPendingDelete(true);
+    const result = await deleteUserAction(removing.uid);
+    setPendingDelete(false);
+    await finish(result, () => setRemoving(null));
+  }
+
   return (
     <div className="flex w-full flex-col gap-4">
-      <div className="flex justify-end"><Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>{t("users.add")}</Button></div>
+      <div className="flex justify-end"><Button type="button" onClick={() => edit(null)}>{t("users.add")}</Button></div>
       {users.length === 0 ? <EmptyState>{t("users.empty")}</EmptyState> : (
-        <Panel>
-          <ul className="divide-y divide-border">
-            {users.map((user) => (
-              <li key={user.uid} className="flex items-center justify-between gap-3 py-3">
-                <button type="button" className="text-start" onClick={() => { setEditing(user); setOpen(true); }}>
-                  <span className="block font-medium">{user.displayName}</span>
-                  <span className="text-sm text-muted-foreground">{user.email}</span>
-                </button>
-                <span className="text-sm">{t(`roles.${user.role}`)}</span>
-                <StatusBadge value={user.active ? "active" : "inactive"} />
-              </li>
-            ))}
-          </ul>
+        <Panel className="overflow-hidden p-0 md:p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.name")}</th>
+                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.email")}</th>
+                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.role")}</th>
+                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
+                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map((user) => (
+                  <tr key={user.uid} className="border-t border-[#550000]/10">
+                    <td className="px-5 py-3 text-start font-medium">{user.displayName}</td>
+                    <td className="px-5 py-3 text-start">{user.email}</td>
+                    <td className="px-5 py-3 text-start">{t(`roles.${user.role}`)}</td>
+                    <td className="px-5 py-3 text-start"><StatusBadge value={user.active ? "active" : "inactive"} /></td>
+                    <td className="px-5 py-3 text-start">
+                      <div className="flex items-center gap-1">
+                        <Button type="button" variant="outline" size="sm" onClick={() => edit(user)}>{t("common.edit")}</Button>
+                        {user.uid === current.uid ? null : (
+                          <Button type="button" variant="ghost" size="sm" onClick={() => setRemoving(user)}>{t("common.delete")}</Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
+      {!removing && error ? <p className="text-sm text-destructive">{error}</p> : null}
       {open ? <UserForm key={editing?.uid ?? "new"} user={editing} employees={employees} onClose={() => setOpen(false)} /> : null}
+      {removing ? (
+        <EditorDialog open title={t("common.delete")} onClose={() => { if (!pendingDelete) setRemoving(null); }}>
+          <p className="text-sm leading-6">{t("users.deleteConfirm")}</p>
+          <p className="text-sm font-medium">{removing.displayName}</p>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pendingDelete} onClick={() => setRemoving(null)}>{t("common.cancel")}</Button>
+            <Button type="button" variant="destructive" disabled={pendingDelete} onClick={() => void remove()}>{t("common.delete")}</Button>
+          </DialogFooter>
+        </EditorDialog>
+      ) : null}
     </div>
   );
 }

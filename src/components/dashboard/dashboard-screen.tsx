@@ -52,13 +52,6 @@ export function DashboardScreen({ data, period }: { data: DashboardData; period:
             <Stat label={t("dashboard.labor")} amount={data.figures.labor} />
             <Stat label={t("dashboard.payroll")} amount={data.figures.payroll} />
           </div>
-          {data.cash ? (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Stat label={t("dashboard.cash")} amount={data.cash.cash} />
-              <Stat label={t("dashboard.bank")} amount={data.cash.bank} />
-              <Stat label={t("dashboard.available")} amount={data.cash.available} tone="emphasis" />
-            </div>
-          ) : null}
           <div className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
             <Panel className={panelClass}>
               <h2 className="mb-3 font-medium">{t("dashboard.chart")}</h2>

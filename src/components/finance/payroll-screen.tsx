@@ -6,7 +6,7 @@ import { generatePayrollAction, payPayrollAction, updatePayrollAction } from "@/
 import { useI18n } from "@/components/providers/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DataTable, DateText, DialogActions, EditorDialog, EmptyState, Field, Money, Panel, StatusBadge, controlClass, useSavedRefresh } from "@/components/records/widgets";
+import { DateText, DialogActions, EditorDialog, EmptyState, Field, Money, Panel, StatusBadge, controlClass, useSavedRefresh } from "@/components/records/widgets";
 import type { CashAccount, LineAmount, PaymentMethod, Payroll } from "@/types";
 
 export function PayrollScreen({ rows, month, accounts }: { rows: Payroll[]; month: string; accounts: CashAccount[] }) {
@@ -15,6 +15,7 @@ export function PayrollScreen({ rows, month, accounts }: { rows: Payroll[]; mont
   const { error, finish } = useSavedRefresh();
   const [editing, setEditing] = useState<Payroll | null>(null);
   const [paying, setPaying] = useState<Payroll | null>(null);
+  const [viewing, setViewing] = useState<Payroll | null>(null);
 
   async function generate(formData: FormData) {
     const result = await generatePayrollAction(String(formData.get("month") ?? month));
@@ -25,37 +26,123 @@ export function PayrollScreen({ rows, month, accounts }: { rows: Payroll[]; mont
   return (
     <div className="flex w-full flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("payroll.paidHint")}</p>
-      <Panel>
-        <form className="flex flex-wrap items-end gap-3" onSubmit={(event) => { event.preventDefault(); void generate(new FormData(event.currentTarget)); }}>
-          <Field label={t("fields.month")}><Input className="numeric h-10 w-44" type="month" name="month" defaultValue={month} /></Field>
-          <Button type="submit">{t("payroll.generate")}</Button>
+      <Panel className="p-5 md:p-6">
+        <form className="flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => { event.preventDefault(); void generate(new FormData(event.currentTarget)); }}>
+          <div className="w-full sm:w-48">
+            <Field label={t("fields.month")}><Input className="numeric h-10 w-full" type="month" name="month" defaultValue={month} /></Field>
+          </div>
+          <Button type="submit" className="h-10 shrink-0 px-6">{t("payroll.generate")}</Button>
         </form>
-        {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
+        {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
       </Panel>
       {rows.length === 0 ? <EmptyState>{t("payroll.empty")}</EmptyState> : (
-        <Panel>
-          <DataTable>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.id} className="border-t border-border">
-                  <td className="px-2 py-3">{row.employeeName}</td>
-                  <td className="px-2 py-3"><Money amount={row.totalPayable} /></td>
-                  <td className="px-2 py-3"><StatusBadge value={row.status} /></td>
-                  <td className="px-2 py-3"><DateText value={row.paymentDate} /></td>
-                  <td className="px-2 py-3">
-                    <div className="flex gap-2">
-                      {row.status !== "paid" ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row)}>{t("payroll.edit")}</Button> : null}
-                      {row.status !== "paid" ? <Button type="button" size="sm" onClick={() => setPaying(row)}>{t("payroll.pay")}</Button> : null}
-                    </div>
-                  </td>
+        <Panel className="overflow-hidden p-0 md:p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="w-[22%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.employee")}</th>
+                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.totalPayable")}</th>
+                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
+                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.paidOn")}</th>
+                  <th className="w-[32%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </DataTable>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id} className="border-t border-[#550000]/10">
+                    <td className="px-5 py-3 text-start font-medium">{row.employeeName}</td>
+                    <td className="px-5 py-3 text-start"><Money amount={row.totalPayable} /></td>
+                    <td className="px-5 py-3 text-start"><StatusBadge value={row.status} /></td>
+                    <td className="px-5 py-3 text-start"><DateText value={row.paymentDate} /></td>
+                    <td className="px-5 py-3 text-start">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setViewing(row)}>{t("common.view")}</Button>
+                        {row.status !== "paid" ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row)}>{t("common.edit")}</Button> : null}
+                        {row.status !== "paid" ? <Button type="button" size="sm" onClick={() => setPaying(row)}>{t("payroll.pay")}</Button> : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       )}
+      {viewing ? <PayrollView payroll={viewing} accounts={accounts} onClose={() => setViewing(null)} /> : null}
       {editing ? <PayrollEditor key={editing.id} payroll={editing} onClose={() => setEditing(null)} /> : null}
       {paying ? <PayDialog key={paying.id} payroll={paying} accounts={accounts} onClose={() => setPaying(null)} /> : null}
+    </div>
+  );
+}
+
+function PayrollView({ payroll, accounts, onClose }: { payroll: Payroll; accounts: CashAccount[]; onClose: () => void }) {
+  const { t } = useI18n();
+  const account = accounts.find((item) => item.id === payroll.accountId);
+  return (
+    <EditorDialog open title={payroll.code || payroll.employeeName} onClose={onClose}>
+      <dl className="grid gap-4 text-sm sm:grid-cols-2">
+        <Detail label={t("fields.code")} value={payroll.code} />
+        <Detail label={t("fields.employee")} value={payroll.employeeName} />
+        <Detail label={t("fields.month")} value={payroll.month} />
+        <div>
+          <dt className="text-muted-foreground">{t("fields.status")}</dt>
+          <dd className="mt-1"><StatusBadge value={payroll.status} /></dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">{t("fields.salary")}</dt>
+          <dd className="mt-1"><Money amount={payroll.basicSalary} /></dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">{t("fields.totalPayable")}</dt>
+          <dd className="mt-1"><Money amount={payroll.totalPayable} /></dd>
+        </div>
+        <Lines label={t("fields.bonuses")} lines={payroll.bonuses} />
+        <Lines label={t("fields.deductions")} lines={payroll.deductions} />
+        <Lines label={t("fields.adjustments")} lines={payroll.adjustments} />
+        <div>
+          <dt className="text-muted-foreground">{t("fields.paidOn")}</dt>
+          <dd className="mt-1"><DateText value={payroll.paymentDate} /></dd>
+        </div>
+        <Detail label={t("fields.method")} value={payroll.paymentMethod ? t(`status.${payroll.paymentMethod}`) : ""} />
+        <Detail label={t("fields.account")} value={account?.name ?? ""} />
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">{t("fields.notes")}</dt>
+          <dd className="mt-1 whitespace-pre-wrap">{payroll.notes || "—"}</dd>
+        </div>
+      </dl>
+      <div className="flex justify-end">
+        <Button type="button" variant="outline" onClick={onClose}>{t("common.close")}</Button>
+      </div>
+    </EditorDialog>
+  );
+}
+
+function Lines({ label, lines }: { label: string; lines: LineAmount[] }) {
+  return (
+    <div className="sm:col-span-2">
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-1">
+        {lines.length === 0 ? "—" : (
+          <ul className="space-y-1">
+            {lines.map((line) => (
+              <li key={line.id} className="flex items-baseline justify-between gap-4">
+                <span>{line.title || "—"}{line.notes ? <span className="text-muted-foreground"> · {line.notes}</span> : null}</span>
+                <Money amount={line.amount} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </dd>
+    </div>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-1">{value || "—"}</dd>
     </div>
   );
 }

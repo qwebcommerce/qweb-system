@@ -9,6 +9,7 @@ import {
   loadInbox,
   saveArticle,
   saveCategory,
+  deleteManagedUser,
   updateManagedUser,
   type CategoryKind,
   type InboxItem,
@@ -24,8 +25,6 @@ const categorySchema = z.object({
   kind: z.enum(kinds),
   nameEn: required(120),
   nameAr: required(120),
-  active: z.boolean(),
-  sortOrder: z.coerce.number().int().min(0).max(9999),
 });
 
 const userSchema = z.object({
@@ -64,8 +63,6 @@ export async function saveCategoryAction(input: unknown, id?: string) {
   if (!data.success) return { ok: false, error: "invalid" } as const;
   return authorized("settings.manage", (user) => saveCategory(user, data.data.kind, {
     name: { en: data.data.nameEn, ar: data.data.nameAr },
-    active: data.data.active,
-    sortOrder: data.data.sortOrder,
   }, id));
 }
 
@@ -94,6 +91,11 @@ export async function updateUserAction(id: string, input: unknown) {
     employeeId: data.data.employeeId,
     password: data.data.password || undefined,
   }).then(() => null));
+}
+
+export async function deleteUserAction(id: string) {
+  if (!id.trim()) return { ok: false, error: "invalid" } as const;
+  return authorized("settings.manage", (user) => deleteManagedUser(user, id).then(() => null));
 }
 
 export async function saveArticleAction(input: unknown, id?: string) {

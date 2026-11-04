@@ -21,7 +21,7 @@ export function ClientDetail({
   tasks: Task[];
 }) {
   const { t } = useI18n();
-  const [tab, setTab] = useState<"overview" | "projects" | "revenue" | "tasks" | "notes">("overview");
+  const [tab, setTab] = useState<"projects" | "revenue" | "tasks">("projects");
   const [editing, setEditing] = useState(false);
   return (
     <div className="flex w-full flex-col gap-4">
@@ -32,24 +32,29 @@ export function ClientDetail({
         </div>
         <Button type="button" variant="outline" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
       </div>
+      <Panel>
+        <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <Info label={t("fields.company")} value={client.companyName} />
+          <Info label={t("fields.contact")} value={client.contactPerson} />
+          <Info label={t("fields.mobile")} value={client.mobile} />
+          <Info label={t("common.email")} value={client.email} />
+          <div>
+            <dt className="text-muted-foreground">{t("fields.status")}</dt>
+            <dd className="mt-1"><StatusBadge value={client.status} /></dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground">{t("fields.notes")}</dt>
+            <dd className="mt-1 whitespace-pre-wrap">{client.notes || "—"}</dd>
+          </div>
+        </dl>
+      </Panel>
       <div className="flex gap-2 overflow-x-auto">
-        {(["overview", "projects", "revenue", "tasks", "notes"] as const).map((item) => (
+        {(["projects", "revenue", "tasks"] as const).map((item) => (
           <Button key={item} type="button" size="sm" variant={tab === item ? "default" : "outline"} onClick={() => setTab(item)}>
-            {item === "notes" ? t("fields.notes") : t(`clients.${item}`)}
+            {t(`clients.${item}`)}
           </Button>
         ))}
       </div>
-      {tab === "overview" ? (
-        <Panel>
-          <dl className="grid gap-3 text-sm sm:grid-cols-2">
-            <Info label={t("fields.company")} value={client.companyName} />
-            <Info label={t("fields.contact")} value={client.contactPerson} />
-            <Info label={t("fields.mobile")} value={client.mobile} />
-            <Info label={t("common.email")} value={client.email} />
-            <div><dt className="text-muted-foreground">{t("fields.status")}</dt><dd className="mt-1"><StatusBadge value={client.status} /></dd></div>
-          </dl>
-        </Panel>
-      ) : null}
       {tab === "projects" ? <Links rows={projects.map((project) => ({ id: project.id, href: `/operations/projects/${project.id}`, title: project.title, extra: project.status }))} empty={t("projects.empty")} /> : null}
       {tab === "revenue" ? (
         <Panel>
@@ -68,7 +73,6 @@ export function ClientDetail({
         </Panel>
       ) : null}
       {tab === "tasks" ? <Links rows={tasks.map((task) => ({ id: task.id, href: "/operations/tasks", title: task.description, extra: task.status }))} empty={t("tasks.empty")} /> : null}
-      {tab === "notes" ? <Panel><p className="whitespace-pre-wrap text-sm">{client.notes || "—"}</p></Panel> : null}
       {editing ? <ClientForm open client={client} onClose={() => setEditing(false)} /> : null}
     </div>
   );
@@ -87,11 +91,34 @@ export function EmployeeDetail({ employee, tasks }: { employee: Employee; tasks:
         </div>
         <Button type="button" variant="outline" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Panel><p className="text-sm text-muted-foreground">{t("fields.salary")}</p><p className="mt-2 text-lg font-semibold"><Money amount={employee.basicSalary} /></p></Panel>
-        <Panel><p className="text-sm text-muted-foreground">{t("fields.hourlyCost")}</p><p className="mt-2 text-lg font-semibold"><Money amount={employee.hourlyCost} /></p></Panel>
-        <Panel><p className="text-sm text-muted-foreground">{t("fields.status")}</p><div className="mt-2"><StatusBadge value={employee.workingStatus} /></div></Panel>
-      </div>
+      <Panel>
+        <dl className="grid gap-4 text-sm sm:grid-cols-2">
+          <Info label={t("common.email")} value={employee.email} />
+          <Info label={t("fields.mobile")} value={employee.mobile} />
+          <Info label={t("fields.position")} value={employee.position} />
+          <Info label={t("fields.type")} value={t(`status.${employee.type}`)} />
+          <div>
+            <dt className="text-muted-foreground">{t("fields.startDate")}</dt>
+            <dd className="mt-1"><DateText value={employee.startDate} /></dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{t("fields.status")}</dt>
+            <dd className="mt-1"><StatusBadge value={employee.workingStatus} /></dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{t("fields.salary")}</dt>
+            <dd className="mt-1"><Money amount={employee.basicSalary} /></dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">{t("fields.hourlyCost")}</dt>
+            <dd className="mt-1"><Money amount={employee.hourlyCost} /></dd>
+          </div>
+          <div className="sm:col-span-2">
+            <dt className="text-muted-foreground">{t("fields.notes")}</dt>
+            <dd className="mt-1 whitespace-pre-wrap">{employee.notes || "—"}</dd>
+          </div>
+        </dl>
+      </Panel>
       <p className="text-sm text-muted-foreground">{t("employees.inactiveHint")}</p>
       <Panel>
         <h3 className="mb-3 font-medium">{t("nav.tasks")}</h3>

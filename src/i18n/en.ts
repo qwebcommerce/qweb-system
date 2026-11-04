@@ -32,6 +32,7 @@ export const en = {
     add: "Add",
     edit: "Edit",
     delete: "Delete",
+    view: "View",
     confirm: "Confirm",
     back: "Back",
     export: "Export",
@@ -121,7 +122,7 @@ export const en = {
     labor: "Allocated labor",
     payroll: "Payroll paid",
     activity: "Recent activity",
-    positionHint: "Cash and bank balances are current. Revenue, expenses, pending items, payroll, and labor follow the selected period. Project profit is the current total, not a period slice.",
+    positionHint: "Revenue, expenses, pending items, payroll, and labor follow the selected period. Project profit is the current total, not a period slice.",
     chart: "Revenue and expenses",
     breakdown: "Expense breakdown",
     recent: "Recent movements",
@@ -212,6 +213,7 @@ export const en = {
     description: "Description",
     hours: "Hours",
     salary: "Basic salary",
+    totalPayable: "Total payable",
     hourlyCost: "Hourly cost",
     startDate: "Start date",
     endDate: "End date",
@@ -302,12 +304,14 @@ export const en = {
     projects: "Projects",
     revenue: "Revenue",
     tasks: "Tasks",
+    deleteConfirm: "Delete this client? The record stays if a project, revenue, expense, or task still uses it.",
   },
   employees: {
     add: "Add employee",
     edit: "Edit employee",
     empty: "No employees yet.",
     inactiveHint: "Inactive employees are excluded from payroll generation.",
+    deleteConfirm: "Delete this employee? The record stays if payroll, labor, tasks, or a user account still uses it.",
   },
   projects: {
     add: "Add project",
@@ -325,6 +329,7 @@ export const en = {
     assign: "Assign member",
     labor: "Record labor",
     remove: "Remove project",
+    deleteConfirm: "Delete this project? The record stays if revenue, an expense, or a task still uses it.",
   },
   tasks: {
     add: "Add task",
@@ -339,6 +344,7 @@ export const en = {
     all: "All",
     completed: "Completed",
     staffHint: "You can update the status and your notes on tasks assigned to you.",
+    deleteConfirm: "Delete this task?",
   },
   expenses: {
     add: "Add expense",
@@ -351,6 +357,10 @@ export const en = {
     hint: "A schedule is not a payment. Generating due dates creates one expense per date.",
     periodTotal: "Shown total",
     cancelPaid: "Cancel payment",
+    deleteConfirm: "Delete this expense?",
+    cancelConfirm: "Cancel this payment? The expense is marked cancelled and the account balance is restored.",
+    editSchedule: "Edit schedule",
+    deleteSchedule: "Delete this schedule? Expenses already created from it stay.",
   },
   revenue: {
     add: "Record revenue",
@@ -358,6 +368,8 @@ export const en = {
     empty: "No received revenue yet.",
     hint: "Saving records money that was received and updates the project collected amount.",
     cancel: "Cancel revenue",
+    cancelConfirm: "Cancel this revenue? It stays on record as cancelled, and the project collected amount and the account balance are reversed.",
+    deleteConfirm: "Delete this revenue? The record is removed. If it was received, the project collected amount and the account balance are reversed.",
   },
   payroll: {
     generate: "Generate payroll",
@@ -408,6 +420,7 @@ export const en = {
     empty: "No users yet.",
     passwordHint: "Leave the password empty to keep the current one.",
     linkedEmployee: "Linked employee",
+    deleteConfirm: "Delete this user? The account cannot be used again.",
   },
   categories: {
     add: "Add category",

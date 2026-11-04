@@ -253,6 +253,37 @@ export async function saveClient(user: SessionUser, input: Omit<Client, "id" | "
   return ref.id;
 }
 
+export async function deleteClient(user: SessionUser, id: string) {
+  await live();
+  const db = database();
+  const [projectSnap, revenueSnap, expenseSnap, scheduleSnap, taskSnap] = await Promise.all([
+    projects().where("clientId", "==", id).limit(1).get(),
+    db.collection(collections.revenue).where("clientId", "==", id).limit(1).get(),
+    db.collection(collections.expenses).where("clientId", "==", id).limit(1).get(),
+    db.collection(collections.recurringExpenses).where("clientId", "==", id).limit(1).get(),
+    tasks().where("clientId", "==", id).limit(1).get(),
+  ]);
+  if (!projectSnap.empty || !revenueSnap.empty || !expenseSnap.empty || !scheduleSnap.empty || !taskSnap.empty) {
+    throw new RecordError("linked");
+  }
+  const ref = clients().doc(id);
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (!existing.exists) throw new RecordError("not_found");
+    tx.delete(ref);
+    tx.set(db.collection(collections.activityLogs).doc(), activityRecord({
+      userId: user.uid,
+      userName: user.displayName,
+      action: "client.deleted",
+      module: "clients",
+      recordId: id,
+      description: "Deleted a client with no related records.",
+      previousValues: { name: existing.data()?.name, code: existing.data()?.code },
+      newValues: null,
+    }));
+  });
+}
+
 export function listEmployees(filters: { search?: string; status?: string; cursor?: string | null }) {
   return pageOf(collections.employees, { ...filters, field: "workingStatus", value: filters.status }, mapEmployee);
 }
@@ -307,6 +338,38 @@ export async function saveEmployee(
     }));
   });
   return ref.id;
+}
+
+export async function deleteEmployee(user: SessionUser, id: string) {
+  await live();
+  const db = database();
+  const [payrollSnap, laborSnap, memberSnap, assignedSnap, givenSnap, userSnap] = await Promise.all([
+    db.collection(collections.payroll).where("employeeId", "==", id).limit(1).get(),
+    labor().where("employeeId", "==", id).limit(1).get(),
+    members().where("employeeId", "==", id).limit(1).get(),
+    tasks().where("assignedToId", "==", id).limit(1).get(),
+    tasks().where("givenById", "==", `employee:${id}`).limit(1).get(),
+    db.collection(collections.users).where("employeeId", "==", id).limit(1).get(),
+  ]);
+  if (!payrollSnap.empty || !laborSnap.empty || !memberSnap.empty || !assignedSnap.empty || !givenSnap.empty || !userSnap.empty) {
+    throw new RecordError("linked");
+  }
+  const ref = employees().doc(id);
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(ref);
+    if (!existing.exists) throw new RecordError("not_found");
+    tx.delete(ref);
+    tx.set(db.collection(collections.activityLogs).doc(), activityRecord({
+      userId: user.uid,
+      userName: user.displayName,
+      action: "employee.deleted",
+      module: "employees",
+      recordId: id,
+      description: "Deleted an employee with no related records.",
+      previousValues: { fullName: existing.data()?.fullName, code: existing.data()?.code },
+      newValues: null,
+    }));
+  });
 }
 
 export function listProjects(filters: { search?: string; status?: string; clientId?: string; cursor?: string | null }) {

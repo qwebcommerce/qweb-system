@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authorized } from "@/server/actions/guard";
 import {
   cancelRevenue,
+  deleteRevenue,
   expensesForExport,
   generateDueOccurrences,
   generatePayroll,
@@ -13,6 +14,7 @@ import {
   saveAccount,
   saveExpense,
   saveRevenue,
+  deleteSchedule,
   saveSchedule,
   setScheduleActive,
   transferFunds,
@@ -146,6 +148,11 @@ export async function saveScheduleAction(input: unknown, id?: string) {
   }, id));
 }
 
+export async function deleteScheduleAction(id: string) {
+  if (!id.trim()) return { ok: false, error: "invalid" } as const;
+  return authorized("finance.view", (user) => deleteSchedule(user, id).then(() => null));
+}
+
 export async function setScheduleActiveAction(id: string, active: boolean) {
   return authorized("finance.view", () => setScheduleActive(id, active).then(() => null));
 }
@@ -167,6 +174,11 @@ export async function saveRevenueAction(input: unknown, id?: string) {
 
 export async function cancelRevenueAction(id: string) {
   return authorized("finance.view", (user) => cancelRevenue(user, id).then(() => null));
+}
+
+export async function deleteRevenueAction(id: string) {
+  if (!id.trim()) return { ok: false, error: "invalid" } as const;
+  return authorized("finance.view", (user) => deleteRevenue(user, id).then(() => null));
 }
 
 export async function saveAccountAction(input: unknown, id?: string) {

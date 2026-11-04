@@ -12,6 +12,7 @@ import {
   findPaidPayrollWithoutExpense,
   laborCost,
   nextDueDate,
+  resolveNextDue,
   payableTotal,
   pendingOccurrenceDates,
   payrollIdempotencyKey,
@@ -142,6 +143,34 @@ describe("recurring occurrences", () => {
     assert.equal(nextDueDate("2026-02-28", "monthly", 31), "2026-03-31");
     assert.equal(nextDueDate("2024-02-29", "yearly", 29), "2025-02-28");
     assert.equal(nextDueDate("2026-11-03", "daily"), "2026-11-04");
+  });
+
+  it("sets the first due one period after the start, and never past the end date", () => {
+    assert.equal(resolveNextDue({ startDate: "2026-11-04", frequency: "monthly" }), "2026-12-04");
+    assert.equal(resolveNextDue({ startDate: "2026-11-04", frequency: "yearly" }), "2027-11-04");
+    assert.equal(resolveNextDue({ startDate: "2026-11-04", frequency: "daily" }), "2026-11-05");
+    assert.equal(resolveNextDue({ startDate: "2026-01-31", frequency: "monthly", anchorDay: 31 }), "2026-02-28");
+    assert.equal(
+      resolveNextDue({ startDate: "2026-11-04", endDate: "2026-12-01", frequency: "monthly" }),
+      "",
+    );
+    assert.equal(
+      resolveNextDue({
+        startDate: "2026-11-04",
+        frequency: "monthly",
+        nextDueDate: "2026-11-04",
+      }),
+      "2026-12-04",
+    );
+    assert.equal(
+      resolveNextDue({
+        startDate: "2026-01-15",
+        endDate: "2026-12-31",
+        frequency: "monthly",
+        nextDueDate: "2026-04-15",
+      }),
+      "2026-04-15",
+    );
   });
 
   it("builds one key per due date and detects duplicates", () => {

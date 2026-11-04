@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { cancelRevenueAction, exportRevenueAction, saveRevenueAction } from "@/server/actions/finance";
+import { cancelRevenueAction, deleteRevenueAction, exportRevenueAction, saveRevenueAction } from "@/server/actions/finance";
 import { downloadCsv, toCsv } from "@/lib/csv";
 import { useI18n } from "@/components/providers/locale-provider";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   DataTable,
@@ -58,9 +59,20 @@ export function RevenueScreen({
   accounts: CashAccount[];
 }) {
   const { t } = useI18n();
+  const { error, finish } = useSavedRefresh();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Revenue | null>(null);
+  const [pending, setPending] = useState<{ item: Revenue; mode: "cancel" | "delete" } | null>(null);
+  const [pendingBusy, setPendingBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  async function confirmPending() {
+    if (!pending) return;
+    setPendingBusy(true);
+    const result = pending.mode === "delete" ? await deleteRevenueAction(pending.item.id) : await cancelRevenueAction(pending.item.id);
+    setPendingBusy(false);
+    await finish(result, () => setPending(null));
+  }
 
   async function exportRows() {
     const result = await exportRevenueAction();
@@ -88,11 +100,17 @@ export function RevenueScreen({
             <tbody>
               {page.items.map((item) => (
                 <tr key={item.id} className="border-t border-border">
-                  <td className="px-2 py-3"><button type="button" className="font-medium text-primary" onClick={() => { setEditing(item); setOpen(true); }}>{item.description}</button></td>
+                  <td className="px-2 py-3 font-medium">{item.description}</td>
                   <td className="px-2 py-3"><DateText value={item.date} /></td>
                   <td className="px-2 py-3"><Money amount={item.amount} /></td>
                   <td className="px-2 py-3"><StatusBadge value={item.status} /></td>
-                  <td className="px-2 py-3">{item.status === "received" ? <CancelRevenue id={item.id} /> : null}</td>
+                  <td className="px-2 py-3">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(item); setOpen(true); }}>{t("common.edit")}</Button>
+                      {item.status === "received" ? <Button type="button" variant="ghost" size="sm" onClick={() => setPending({ item, mode: "cancel" })}>{t("revenue.cancel")}</Button> : null}
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setPending({ item, mode: "delete" })}>{t("common.delete")}</Button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -101,6 +119,19 @@ export function RevenueScreen({
         </Panel>
       )}
       {open ? <RevenueForm key={editing?.id ?? "new"} revenue={editing} categories={categories} clients={clients} projects={projects} accounts={accounts} onClose={() => setOpen(false)} /> : null}
+      {pending ? (
+        <EditorDialog open title={pending.mode === "delete" ? t("common.delete") : t("revenue.cancel")} onClose={() => { if (!pendingBusy) setPending(null); }}>
+          <p className="text-sm leading-6">{pending.mode === "delete" ? t("revenue.deleteConfirm") : t("revenue.cancelConfirm")}</p>
+          <p className="text-sm font-medium">{pending.item.description}</p>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pendingBusy} onClick={() => setPending(null)}>{t("common.cancel")}</Button>
+            <Button type="button" variant="destructive" disabled={pendingBusy} onClick={() => void confirmPending()}>
+              {pending.mode === "delete" ? t("common.delete") : t("revenue.cancel")}
+            </Button>
+          </DialogFooter>
+        </EditorDialog>
+      ) : null}
     </div>
   );
 }
@@ -180,8 +211,3 @@ function RevenueForm({ revenue, categories, clients, projects, accounts, onClose
   );
 }
 
-function CancelRevenue({ id }: { id: string }) {
-  const { t } = useI18n();
-  const { finish } = useSavedRefresh();
-  return <Button type="button" variant="ghost" size="sm" onClick={() => void finish(cancelRevenueAction(id))}>{t("revenue.cancel")}</Button>;
-}

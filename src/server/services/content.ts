@@ -35,14 +35,14 @@ function mapCategory(id: string, data: DocumentData): Category {
 
 export async function listCategories(kind: CategoryKind) {
   await live();
-  const snapshot = await database().collection(categoryCollections[kind]).orderBy("sortOrder").limit(200).get();
+  const snapshot = await database().collection(categoryCollections[kind]).orderBy("createdAt").limit(200).get();
   return snapshot.docs.map((doc) => mapCategory(doc.id, doc.data()));
 }
 
 export async function saveCategory(
   user: SessionUser,
   kind: CategoryKind,
-  input: { name: LocalizedText; active: boolean; sortOrder: number },
+  input: { name: LocalizedText },
   id?: string,
 ) {
   await live();
@@ -52,8 +52,7 @@ export async function saveCategory(
     if (id && !existing?.exists) throw new RecordError("not_found");
     tx.set(ref, {
       name: input.name,
-      active: input.active,
-      sortOrder: input.sortOrder,
+      active: true,
       systemKey: existing?.data()?.systemKey ?? null,
       updatedAt: stamp(),
       ...(existing?.exists ? {} : { createdAt: stamp(), createdBy: user.uid }),
@@ -65,7 +64,7 @@ export async function saveCategory(
       module: "settings",
       recordId: ref.id,
       description: "Updated a category.",
-      newValues: { kind, name: input.name.en, active: input.active },
+      newValues: { kind, name: input.name.en },
     }));
   });
   return ref.id;
@@ -207,6 +206,29 @@ export async function updateManagedUser(
     description: "Updated a user.",
     previousValues: { role: existing.data()?.role, active: existing.data()?.active },
     newValues: { role: input.role, active: input.active },
+  }));
+}
+
+export async function deleteManagedUser(actor: SessionUser, id: string) {
+  await live();
+  if (actor.uid === id) throw new RecordError("invalid");
+  const ref = database().collection(collections.users).doc(id);
+  const existing = await ref.get();
+  if (!existing.exists) throw new RecordError("not_found");
+  const email = asText(existing.data()?.email);
+  await getAdminAuth().deleteUser(id).catch((error: { code?: string }) => {
+    if (error.code === "auth/user-not-found") return;
+    throw error;
+  });
+  await ref.delete();
+  await database().collection(collections.activityLogs).add(activityRecord({
+    userId: actor.uid,
+    userName: actor.displayName,
+    action: "user.deleted",
+    module: "users",
+    recordId: id,
+    description: "Deleted a user.",
+    previousValues: { email, role: existing.data()?.role },
   }));
 }
 

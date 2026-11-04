@@ -8,9 +8,9 @@ import { deleteTaskAction, saveTaskAction } from "@/server/actions/operations";
 import { useCurrentUser } from "@/components/providers/user-provider";
 import { useI18n } from "@/components/providers/locale-provider";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  DataTable,
   DateText,
   DialogActions,
   EditorDialog,
@@ -57,14 +57,26 @@ export function TasksScreen({
   const user = useCurrentUser();
   const staff = user.role === "staff";
   const [mode, setMode] = useState<"table" | "board">("table");
+  const { error, finish } = useSavedRefresh();
   const [editing, setEditing] = useState<Task | null>(null);
+  const [viewing, setViewing] = useState<Task | null>(null);
   const [open, setOpen] = useState(false);
+  const [removing, setRemoving] = useState<Task | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
+
+  async function remove() {
+    if (!removing || staff) return;
+    setPendingDelete(true);
+    const result = await deleteTaskAction(removing.id);
+    setPendingDelete(false);
+    await finish(result, () => setRemoving(null));
+  }
 
   return (
     <div className="flex w-full flex-col gap-4">
       {staff ? <p className="text-sm text-muted-foreground">{t("tasks.staffHint")}</p> : null}
-      <Panel>
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <Panel className="p-5 md:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             {views.filter((item) => (staff ? item !== "mine" : true)).map((item) => (
               <Button key={item} variant={view === item ? "default" : "outline"} size="sm" render={<a href={`?view=${item}`} />}>
@@ -72,37 +84,45 @@ export function TasksScreen({
               </Button>
             ))}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button type="button" variant={mode === "table" ? "secondary" : "outline"} size="sm" onClick={() => setMode("table")}>{t("tasks.table")}</Button>
             <Button type="button" variant={mode === "board" ? "secondary" : "outline"} size="sm" onClick={() => setMode("board")}>{t("tasks.board")}</Button>
-            {staff ? null : <Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>{t("tasks.add")}</Button>}
+            {staff ? null : <Button type="button" className="h-10 shrink-0 px-6" onClick={() => { setEditing(null); setOpen(true); }}>{t("tasks.add")}</Button>}
           </div>
         </div>
       </Panel>
       {tasks.length === 0 ? <EmptyState>{t("tasks.empty")}</EmptyState> : mode === "table" ? (
-        <Panel>
-          <DataTable>
-            <thead>
-              <tr className="text-start text-muted-foreground">
-                <th className="px-2 py-2 font-medium">{t("fields.code")}</th>
-                <th className="px-2 py-2 font-medium">{t("fields.description")}</th>
-                <th className="px-2 py-2 font-medium">{t("fields.date")}</th>
-                <th className="px-2 py-2 font-medium">{t("fields.status")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tasks.map((task) => (
-                <tr key={task.id} className="border-t border-border">
-                  <td className="numeric px-2 py-3">{task.code}</td>
-                  <td className="px-2 py-3">
-                    <button type="button" className="text-start font-medium text-primary" onClick={() => { setEditing(task); setOpen(true); }}>{task.description}</button>
-                  </td>
-                  <td className="px-2 py-3"><DateText value={task.taskDate} /></td>
-                  <td className="px-2 py-3"><StatusBadge value={task.status} /></td>
+        <Panel className="overflow-hidden p-0 md:p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="w-[12%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.code")}</th>
+                  <th className="w-[36%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.description")}</th>
+                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.date")}</th>
+                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
+                  <th className="w-[22%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </DataTable>
+              </thead>
+              <tbody>
+                {tasks.map((task) => (
+                  <tr key={task.id} className="border-t border-[#550000]/10">
+                    <td className="numeric px-5 py-3 text-start">{task.code}</td>
+                    <td className="px-5 py-3 text-start">{task.description}</td>
+                    <td className="px-5 py-3 text-start"><DateText value={task.taskDate} /></td>
+                    <td className="px-5 py-3 text-start"><StatusBadge value={task.status} /></td>
+                    <td className="px-5 py-3 text-start">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <Button type="button" variant="outline" size="sm" onClick={() => setViewing(task)}>{t("common.view")}</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(task); setOpen(true); }}>{t("common.edit")}</Button>
+                        {staff ? null : <Button type="button" variant="ghost" size="sm" onClick={() => setRemoving(task)}>{t("common.delete")}</Button>}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Panel>
       ) : (
         <div className="grid gap-3 lg:grid-cols-5">
@@ -121,6 +141,7 @@ export function TasksScreen({
           ))}
         </div>
       )}
+      {!removing && error ? <p className="text-sm text-destructive">{error}</p> : null}
       {open ? (
         <TaskForm
           key={editing?.id ?? "new"}
@@ -132,6 +153,86 @@ export function TasksScreen({
           onClose={() => setOpen(false)}
         />
       ) : null}
+      {viewing ? (
+        <TaskView task={viewing} clients={clients} projects={projects} people={people} onClose={() => setViewing(null)} />
+      ) : null}
+      {removing ? (
+        <EditorDialog open title={t("common.delete")} onClose={() => { if (!pendingDelete) setRemoving(null); }}>
+          <p className="text-sm leading-6">{t("tasks.deleteConfirm")}</p>
+          <p className="text-sm font-medium">{removing.description}</p>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pendingDelete} onClick={() => setRemoving(null)}>{t("common.cancel")}</Button>
+            <Button type="button" variant="destructive" disabled={pendingDelete} onClick={() => void remove()}>{t("common.delete")}</Button>
+          </DialogFooter>
+        </EditorDialog>
+      ) : null}
+    </div>
+  );
+}
+
+function personName(
+  id: string | null,
+  people: { employees: Array<{ id: string; fullName: string }>; users: Array<{ id: string; name: string }> },
+) {
+  if (!id) return "";
+  if (id.startsWith("user:")) return people.users.find((person) => person.id === id.slice(5))?.name ?? "";
+  const employeeId = id.startsWith("employee:") ? id.slice(9) : id;
+  return people.employees.find((person) => person.id === employeeId)?.fullName ?? "";
+}
+
+function TaskView({
+  task,
+  clients,
+  projects,
+  people,
+  onClose,
+}: {
+  task: Task;
+  clients: Array<{ id: string; name: string }>;
+  projects: Array<{ id: string; title: string; clientId: string }>;
+  people: { employees: Array<{ id: string; fullName: string }>; users: Array<{ id: string; name: string }> };
+  onClose: () => void;
+}) {
+  const { t } = useI18n();
+  const client = clients.find((item) => item.id === task.clientId)?.name ?? "";
+  const project = projects.find((item) => item.id === task.projectId)?.title ?? "";
+  return (
+    <EditorDialog open title={task.code} onClose={onClose}>
+      <dl className="grid gap-4 text-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">{t("fields.description")}</dt>
+          <dd className="mt-1 whitespace-pre-wrap">{task.description}</dd>
+        </div>
+        <Detail label={t("fields.client")} value={client} />
+        <Detail label={t("fields.project")} value={project} />
+        <div>
+          <dt className="text-muted-foreground">{t("fields.date")}</dt>
+          <dd className="mt-1"><DateText value={task.taskDate} /></dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">{t("fields.status")}</dt>
+          <dd className="mt-1"><StatusBadge value={task.status} /></dd>
+        </div>
+        <Detail label={t("fields.givenBy")} value={personName(task.givenById, people)} />
+        <Detail label={t("fields.assignedTo")} value={personName(task.assignedToId, people)} />
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">{t("fields.staffNotes")}</dt>
+          <dd className="mt-1 whitespace-pre-wrap">{task.staffNotes || "—"}</dd>
+        </div>
+      </dl>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>{t("common.close")}</Button>
+      </DialogFooter>
+    </EditorDialog>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-1">{value || "—"}</dd>
     </div>
   );
 }

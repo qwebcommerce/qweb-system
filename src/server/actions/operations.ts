@@ -4,6 +4,8 @@ import { z } from "zod";
 import { authorized } from "@/server/actions/guard";
 import {
   assignMember,
+  deleteClient,
+  deleteEmployee,
   deleteLabor,
   deleteProject,
   deleteTask,
@@ -94,6 +96,11 @@ export async function saveClientAction(input: unknown, id?: string) {
   }, id));
 }
 
+export async function deleteClientAction(id: string) {
+  if (!id.trim()) return { ok: false, error: "invalid" } as const;
+  return authorized("operations.view", (user) => deleteClient(user, id).then(() => null));
+}
+
 export async function saveEmployeeAction(input: unknown, id?: string) {
   const data = employeeSchema.safeParse(input);
   if (!data.success) return { ok: false, error: "invalid" } as const;
@@ -114,6 +121,11 @@ export async function saveProjectAction(input: unknown, id?: string) {
     status: data.data.status as ProjectStatus,
     contractType: data.data.contractType as ContractType,
   }, id));
+}
+
+export async function deleteEmployeeAction(id: string) {
+  if (!id.trim()) return { ok: false, error: "invalid" } as const;
+  return authorized("operations.view", (user) => deleteEmployee(user, id).then(() => null));
 }
 
 export async function deleteProjectAction(id: string) {

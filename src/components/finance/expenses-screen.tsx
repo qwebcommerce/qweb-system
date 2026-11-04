@@ -6,12 +6,13 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { downloadCsv, toCsv } from "@/lib/csv";
-import { exportExpensesAction, generateDueAction, removeExpenseAction, saveExpenseAction, saveScheduleAction, setScheduleActiveAction } from "@/server/actions/finance";
+import { resolveNextDue } from "@/lib/financial/calculations";
+import { deleteScheduleAction, exportExpensesAction, generateDueAction, removeExpenseAction, saveExpenseAction, saveScheduleAction, setScheduleActiveAction } from "@/server/actions/finance";
 import { useI18n } from "@/components/providers/locale-provider";
 import { Button } from "@/components/ui/button";
+import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  DataTable,
   DateText,
   DialogActions,
   EditorDialog,
@@ -26,7 +27,7 @@ import {
   localizedName,
   useSavedRefresh,
 } from "@/components/records/widgets";
-import type { CashAccount, Category, Expense, ExpenseStatus, PaymentMethod, RecurringExpense } from "@/types";
+import type { CashAccount, Category, Expense, ExpenseStatus, PaymentMethod, RecurringExpense, ScheduleFrequency } from "@/types";
 
 const methods: PaymentMethod[] = ["cash", "cheque", "card", "bank_transfer"];
 const statuses: ExpenseStatus[] = ["pending", "paid", "overdue", "cancelled"];
@@ -67,9 +68,15 @@ export function ExpensesScreen({
   schedules: RecurringExpense[];
 }) {
   const { t } = useI18n();
+  const { error, finish } = useSavedRefresh();
   const [open, setOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<RecurringExpense | null>(null);
+  const [removingSchedule, setRemovingSchedule] = useState<RecurringExpense | null>(null);
   const [editing, setEditing] = useState<Expense | null>(null);
+  const [viewing, setViewing] = useState<Expense | null>(null);
+  const [removing, setRemoving] = useState<Expense | null>(null);
+  const [pendingDelete, setPendingDelete] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const shown = page.items.filter((item) => item.status === "paid").reduce((total, item) => total + item.amount, 0);
 
@@ -81,6 +88,22 @@ export function ExpensesScreen({
     }
     toast.success(t("expenses.generated", { count: result.data ?? 0 }));
     window.location.reload();
+  }
+
+  async function remove() {
+    if (!removing || removing.sourceType === "payroll") return;
+    setPendingDelete(true);
+    const result = await removeExpenseAction(removing.id);
+    setPendingDelete(false);
+    await finish(result, () => setRemoving(null));
+  }
+
+  async function removeSchedule() {
+    if (!removingSchedule) return;
+    setPendingDelete(true);
+    const result = await deleteScheduleAction(removingSchedule.id);
+    setPendingDelete(false);
+    await finish(result, () => setRemovingSchedule(null));
   }
 
   async function exportRows() {
@@ -98,54 +121,71 @@ export function ExpensesScreen({
   return (
     <div className="flex w-full flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("expenses.hint")}</p>
-      <Panel>
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <form className="grid flex-1 gap-3 sm:grid-cols-[1fr_10rem_auto]" method="get">
-            <Input name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
-            <select className={controlClass} name="status" defaultValue={query.status ?? "all"} aria-label={t("fields.status")}>
+      <Panel className="p-5 md:p-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <form className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center" method="get">
+            <Input className="h-10 w-full sm:max-w-sm" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
+            <select className={`${controlClass} sm:w-48`} name="status" defaultValue={query.status ?? "all"} aria-label={t("fields.status")}>
               <option value="all">{t("common.all")}</option>
               {statuses.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}
             </select>
-            <Button type="submit" variant="outline">{t("common.search")}</Button>
+            <Button type="submit" variant="outline" className="h-10 shrink-0 px-6">{t("common.search")}</Button>
           </form>
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={() => void generate()}>{t("expenses.generate")}</Button>
-            <Button type="button" variant="outline" onClick={() => setScheduleOpen(true)}>{t("expenses.schedule")}</Button>
-            <Button type="button" variant="outline" onClick={() => void exportRows()}>{t("common.export")}</Button>
-            <Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>{t("expenses.add")}</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => void generate()}>{t("expenses.generate")}</Button>
+            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => { setEditingSchedule(null); setScheduleOpen(true); }}>{t("expenses.schedule")}</Button>
+            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => void exportRows()}>{t("common.export")}</Button>
+            <Button type="button" className="h-10 shrink-0 px-6" onClick={() => { setEditing(null); setOpen(true); }}>{t("expenses.add")}</Button>
           </div>
         </div>
-        <p className="mt-3 text-sm text-muted-foreground">{t("expenses.periodTotal")}: <Money amount={shown} /></p>
+        <p className="mt-4 text-sm text-muted-foreground">{t("expenses.periodTotal")}: <Money amount={shown} /></p>
         {message ? <p className="mt-2 text-sm text-destructive">{message}</p> : null}
       </Panel>
       {page.items.length === 0 ? <EmptyState>{t("expenses.empty")}</EmptyState> : (
-        <Panel>
-          <DataTable>
-            <thead>
-              <tr className="text-start text-muted-foreground">
-                <th className="px-2 py-2 font-medium">{t("fields.title")}</th>
-                <th className="px-2 py-2 font-medium">{t("fields.amount")}</th>
-                <th className="px-2 py-2 font-medium">{t("fields.dueDate")}</th>
-                <th className="px-2 py-2 font-medium">{t("fields.status")}</th>
-                <th className="px-2 py-2 font-medium">{t("common.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {page.items.map((expense) => (
-                <tr key={expense.id} className="border-t border-border">
-                  <td className="px-2 py-3">
-                    <button type="button" className="text-start font-medium text-primary" onClick={() => { setEditing(expense); setOpen(true); }}>{expense.title}</button>
-                    {expense.isRecurringOccurrence ? <span className="mt-1 block text-xs text-muted-foreground">{t("expenses.schedule")}</span> : null}
-                  </td>
-                  <td className="px-2 py-3"><Money amount={expense.amount} /></td>
-                  <td className="px-2 py-3"><DateText value={expense.dueDate} /></td>
-                  <td className="px-2 py-3"><StatusBadge value={expense.status} /></td>
-                  <td className="px-2 py-3">{expense.sourceType === "payroll" ? null : <RemoveExpense id={expense.id} paid={expense.status === "paid"} />}</td>
+        <Panel className="overflow-hidden p-0 md:p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="w-[28%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.title")}</th>
+                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.amount")}</th>
+                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.dueDate")}</th>
+                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
+                  <th className="w-[28%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </DataTable>
-          <Pager cursor={page.nextCursor} query={query} />
+              </thead>
+              <tbody>
+                {page.items.map((expense) => {
+                  const payroll = expense.sourceType === "payroll";
+                  return (
+                    <tr key={expense.id} className="border-t border-[#550000]/10">
+                      <td className="px-5 py-3 text-start">
+                        <span className="font-medium">{expense.title}</span>
+                        {expense.isRecurringOccurrence ? <span className="mt-1 block text-xs text-muted-foreground">{t("expenses.schedule")}</span> : null}
+                      </td>
+                      <td className="px-5 py-3 text-start"><Money amount={expense.amount} /></td>
+                      <td className="px-5 py-3 text-start"><DateText value={expense.dueDate} /></td>
+                      <td className="px-5 py-3 text-start"><StatusBadge value={expense.status} /></td>
+                      <td className="px-5 py-3 text-start">
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Button type="button" variant="outline" size="sm" onClick={() => setViewing(expense)}>{t("common.view")}</Button>
+                          {payroll ? null : <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(expense); setOpen(true); }}>{t("common.edit")}</Button>}
+                          {payroll ? null : (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => setRemoving(expense)}>
+                              {expense.status === "paid" ? t("expenses.cancelPaid") : t("common.delete")}
+                            </Button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="px-5 pb-4">
+            <Pager cursor={page.nextCursor} query={query} />
+          </div>
         </Panel>
       )}
       <Panel>
@@ -155,10 +195,14 @@ export function ExpensesScreen({
             {schedules.map((schedule) => (
               <li key={schedule.id} className="flex flex-wrap items-center justify-between gap-3">
                 <span>{schedule.title} · <Money amount={schedule.amount} /> · {t(`status.${schedule.frequency}`)}</span>
-                <span className="text-muted-foreground">{t("fields.nextDue")} <DateText value={schedule.nextDueDate} /></span>
-                <Button type="button" variant="outline" size="sm" onClick={() => void setScheduleActiveAction(schedule.id, !schedule.active).then(() => window.location.reload())}>
-                  {schedule.active ? t("status.active") : t("status.inactive")}
-                </Button>
+                <span className="text-muted-foreground">{t("fields.nextDue")} <DateText value={resolveNextDue(schedule)} /></span>
+                <div className="flex flex-wrap items-center gap-1">
+                  <Button type="button" variant="outline" size="sm" onClick={() => { setEditingSchedule(schedule); setScheduleOpen(true); }}>{t("common.edit")}</Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setRemovingSchedule(schedule)}>{t("common.delete")}</Button>
+                  <Button type="button" variant="outline" size="sm" onClick={() => void setScheduleActiveAction(schedule.id, !schedule.active).then(() => window.location.reload())}>
+                    {schedule.active ? t("status.active") : t("status.inactive")}
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
@@ -175,7 +219,120 @@ export function ExpensesScreen({
           onClose={() => setOpen(false)}
         />
       ) : null}
-      {scheduleOpen ? <ScheduleForm categories={categories} clients={clients} projects={projects} onClose={() => setScheduleOpen(false)} /> : null}
+      {scheduleOpen ? (
+        <ScheduleForm
+          key={editingSchedule?.id ?? "new"}
+          schedule={editingSchedule}
+          categories={categories}
+          clients={clients}
+          projects={projects}
+          onClose={() => setScheduleOpen(false)}
+        />
+      ) : null}
+      {removingSchedule ? (
+        <EditorDialog open title={t("common.delete")} onClose={() => { if (!pendingDelete) setRemovingSchedule(null); }}>
+          <p className="text-sm leading-6">{t("expenses.deleteSchedule")}</p>
+          <p className="text-sm font-medium">{removingSchedule.title}</p>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pendingDelete} onClick={() => setRemovingSchedule(null)}>{t("common.cancel")}</Button>
+            <Button type="button" variant="destructive" disabled={pendingDelete} onClick={() => void removeSchedule()}>{t("common.delete")}</Button>
+          </DialogFooter>
+        </EditorDialog>
+      ) : null}
+      {viewing ? (
+        <ExpenseView
+          expense={viewing}
+          categories={categories}
+          clients={clients}
+          projects={projects}
+          accounts={accounts}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
+      {removing ? (
+        <EditorDialog open title={removing.status === "paid" ? t("expenses.cancelPaid") : t("common.delete")} onClose={() => { if (!pendingDelete) setRemoving(null); }}>
+          <p className="text-sm leading-6">{removing.status === "paid" ? t("expenses.cancelConfirm") : t("expenses.deleteConfirm")}</p>
+          <p className="text-sm font-medium">{removing.title}</p>
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pendingDelete} onClick={() => setRemoving(null)}>{t("common.cancel")}</Button>
+            <Button type="button" variant="destructive" disabled={pendingDelete} onClick={() => void remove()}>
+              {removing.status === "paid" ? t("expenses.cancelPaid") : t("common.delete")}
+            </Button>
+          </DialogFooter>
+        </EditorDialog>
+      ) : null}
+    </div>
+  );
+}
+
+function ExpenseView({
+  expense,
+  categories,
+  clients,
+  projects,
+  accounts,
+  onClose,
+}: {
+  expense: Expense;
+  categories: Category[];
+  clients: Array<{ id: string; name: string }>;
+  projects: Array<{ id: string; title: string; clientId: string }>;
+  accounts: CashAccount[];
+  onClose: () => void;
+}) {
+  const { t, locale } = useI18n();
+  const category = categories.find((item) => item.id === expense.categoryId);
+  return (
+    <EditorDialog open title={expense.code || expense.title} onClose={onClose}>
+      <dl className="grid gap-4 text-sm sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">{t("fields.title")}</dt>
+          <dd className="mt-1">{expense.title}</dd>
+        </div>
+        <Detail label={t("fields.category")} value={category ? localizedName(category.name, locale) : ""} />
+        <div>
+          <dt className="text-muted-foreground">{t("fields.amount")}</dt>
+          <dd className="mt-1"><Money amount={expense.amount} /></dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">{t("fields.dueDate")}</dt>
+          <dd className="mt-1"><DateText value={expense.dueDate} /></dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">{t("fields.status")}</dt>
+          <dd className="mt-1"><StatusBadge value={expense.status} /></dd>
+        </div>
+        <Detail label={t("fields.client")} value={clients.find((item) => item.id === expense.clientId)?.name ?? ""} />
+        <Detail label={t("fields.project")} value={projects.find((item) => item.id === expense.projectId)?.title ?? ""} />
+        {expense.status === "paid" ? (
+          <>
+            <div>
+              <dt className="text-muted-foreground">{t("fields.paidOn")}</dt>
+              <dd className="mt-1"><DateText value={expense.paidAt} /></dd>
+            </div>
+            <Detail label={t("fields.method")} value={expense.paymentMethod ? t(`status.${expense.paymentMethod}`) : ""} />
+            <Detail label={t("fields.account")} value={accounts.find((item) => item.id === expense.accountId)?.name ?? ""} />
+          </>
+        ) : null}
+        <div className="sm:col-span-2">
+          <dt className="text-muted-foreground">{t("fields.notes")}</dt>
+          <dd className="mt-1 whitespace-pre-wrap">{expense.notes || "—"}</dd>
+        </div>
+      </dl>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onClose}>{t("common.close")}</Button>
+      </DialogFooter>
+    </EditorDialog>
+  );
+}
+
+function Detail({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="mt-1">{value || "—"}</dd>
     </div>
   );
 }
@@ -306,14 +463,48 @@ function ExpenseForm({
   );
 }
 
-function ScheduleForm({ categories, clients, projects, onClose }: { categories: Category[]; clients: Array<{ id: string; name: string }>; projects: Array<{ id: string; title: string }>; onClose: () => void }) {
+function ScheduleForm({
+  schedule,
+  categories,
+  clients,
+  projects,
+  onClose,
+}: {
+  schedule: RecurringExpense | null;
+  categories: Category[];
+  clients: Array<{ id: string; name: string }>;
+  projects: Array<{ id: string; title: string }>;
+  onClose: () => void;
+}) {
   const { t, locale } = useI18n();
   const { error, finish } = useSavedRefresh();
   const form = useForm({
-    defaultValues: { categoryId: categories[0]?.id ?? "", title: "", amount: 0, frequency: "monthly", startDate: "", endDate: "", clientId: "", projectId: "", defaultPaymentMethod: "", notes: "" },
+    defaultValues: schedule ? {
+      categoryId: schedule.categoryId,
+      title: schedule.title,
+      amount: schedule.amount,
+      frequency: schedule.frequency,
+      startDate: schedule.startDate,
+      endDate: schedule.endDate ?? "",
+      clientId: schedule.clientId ?? "",
+      projectId: schedule.projectId ?? "",
+      defaultPaymentMethod: schedule.defaultPaymentMethod ?? "",
+      notes: schedule.notes,
+    } : { categoryId: categories[0]?.id ?? "", title: "", amount: 0, frequency: "monthly" as const, startDate: "", endDate: "", clientId: "", projectId: "", defaultPaymentMethod: "", notes: "" },
+  });
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+  const frequency = form.watch("frequency") as ScheduleFrequency;
+  const cadenceChanged = !schedule || startDate !== schedule.startDate || frequency !== schedule.frequency;
+  const nextDue = resolveNextDue({
+    startDate,
+    endDate: endDate || null,
+    frequency,
+    anchorDay: cadenceChanged ? undefined : schedule?.anchorDay,
+    nextDueDate: cadenceChanged ? null : schedule?.nextDueDate,
   });
   return (
-    <EditorDialog open title={t("expenses.schedule")} onClose={onClose}>
+    <EditorDialog open title={schedule ? t("expenses.editSchedule") : t("expenses.schedule")} onClose={onClose}>
       <form className="grid gap-4" onSubmit={form.handleSubmit(async (values) => {
         const result = await saveScheduleAction({
           ...values,
@@ -322,7 +513,7 @@ function ScheduleForm({ categories, clients, projects, onClose }: { categories: 
           clientId: values.clientId || null,
           projectId: values.projectId || null,
           defaultPaymentMethod: values.defaultPaymentMethod || null,
-        });
+        }, schedule?.id);
         await finish(result, onClose);
       })}>
         <Field label={t("fields.title")}><Input className="h-10" {...form.register("title", { required: true })} /></Field>
@@ -347,6 +538,7 @@ function ScheduleForm({ categories, clients, projects, onClose }: { categories: 
             <select className={controlClass} {...form.register("projectId")}><option value="">{t("common.none")}</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}</select>
           </Field>
         </div>
+        {startDate ? <p className="text-sm text-muted-foreground">{t("fields.nextDue")} <DateText value={nextDue} /></p> : null}
         <Field label={t("fields.notes")}><Input className="h-10" {...form.register("notes")} /></Field>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
         <DialogActions pending={form.formState.isSubmitting} onCancel={onClose} />
@@ -355,8 +547,3 @@ function ScheduleForm({ categories, clients, projects, onClose }: { categories: 
   );
 }
 
-function RemoveExpense({ id, paid }: { id: string; paid: boolean }) {
-  const { t } = useI18n();
-  const { finish } = useSavedRefresh();
-  return <Button type="button" variant="ghost" size="sm" onClick={() => void finish(removeExpenseAction(id))}>{paid ? t("expenses.cancelPaid") : t("common.delete")}</Button>;
-}

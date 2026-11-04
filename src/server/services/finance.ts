@@ -3,7 +3,7 @@ import type { DocumentData, Transaction } from "firebase-admin/firestore";
 import { collections } from "@/config/collections";
 import { keywords } from "@/lib/keywords";
 import { qatarToday } from "@/lib/dates";
-import { applyAccountEntry, nextDueDate, occurrenceKey, payableTotal } from "@/lib/financial/calculations";
+import { applyAccountEntry, nextDueDate, occurrenceKey, payableTotal, resolveNextDue } from "@/lib/financial/calculations";
 import { roundMoney } from "@/lib/financial/money";
 import { allocateCode, asIso, asNullable, asNumber, asText, collectDocuments, database, live, stamp, type Page, PAGE_SIZE } from "@/server/db";
 import { activityRecord } from "@/server/services/activity";
@@ -407,17 +407,26 @@ export async function listSchedules() {
 export async function saveSchedule(user: SessionUser, input: { categoryId: string; title: string; amount: number; frequency: ScheduleFrequency; startDate: string; endDate: string | null; clientId: string | null; projectId: string | null; defaultPaymentMethod: PaymentMethod | null; notes: string }, id?: string) {
   await live();
   const ref = id ? schedules().doc(id) : schedules().doc();
+  if (input.endDate && input.endDate < input.startDate) throw new RecordError("invalid");
   const anchorDay = Number(input.startDate.slice(8, 10));
   await database().runTransaction(async (tx) => {
     const existing = id ? await tx.get(ref) : null;
     if (id && !existing?.exists) throw new RecordError("not_found");
-    const allocated = existing?.exists ? null : await allocateCode(tx, "schedules", "SCH");
+    const previous = existing?.exists ? existing.data() : null;
+    const cadenceChanged = !previous || previous.startDate !== input.startDate || previous.frequency !== input.frequency;
+    const allocated = previous ? null : await allocateCode(tx, "schedules", "SCH");
     if (allocated) tx.set(allocated.ref, { value: allocated.value });
     tx.set(ref, {
       ...input,
       anchorDay,
-      nextDueDate: existing?.data()?.nextDueDate ?? input.startDate,
-      active: existing?.data()?.active !== false,
+      nextDueDate: resolveNextDue({
+        startDate: input.startDate,
+        endDate: input.endDate,
+        frequency: input.frequency,
+        anchorDay,
+        nextDueDate: cadenceChanged ? null : asText(previous?.nextDueDate),
+      }),
+      active: previous?.active !== false,
       code: existing?.data()?.code ?? allocated!.code,
       updatedAt: stamp(),
       ...(existing?.exists ? {} : { createdAt: stamp(), createdBy: user.uid }),
@@ -431,6 +440,23 @@ export async function setScheduleActive(id: string, active: boolean) {
   await schedules().doc(id).update({ active, updatedAt: stamp() });
 }
 
+export async function deleteSchedule(user: SessionUser, id: string) {
+  await live();
+  const ref = schedules().doc(id);
+  const existing = await ref.get();
+  if (!existing.exists) throw new RecordError("not_found");
+  await ref.delete();
+  await database().collection(collections.activityLogs).add(activityRecord({
+    userId: user.uid,
+    userName: user.displayName,
+    action: "schedule.deleted",
+    module: "expenses",
+    recordId: id,
+    description: "Deleted a recurring schedule. Expenses already created from it were kept.",
+    previousValues: { title: existing.data()?.title, code: existing.data()?.code },
+  }));
+}
+
 export async function generateDueOccurrences(user: SessionUser, through = qatarToday()) {
   await live();
   const active = await schedules().where("active", "==", true).get();
@@ -439,10 +465,26 @@ export async function generateDueOccurrences(user: SessionUser, through = qatarT
     const data = schedule.data();
     const items: Array<{ date: string; key: string }> = [];
     const endDate = asNullable(data.endDate);
-    let cursor = asText(data.nextDueDate);
+    const frequency = (data.frequency ?? "monthly") as ScheduleFrequency;
+    const storedDue = asText(data.nextDueDate);
+    let cursor = resolveNextDue({
+      startDate: asText(data.startDate),
+      endDate,
+      frequency,
+      anchorDay: asNumber(data.anchorDay),
+      nextDueDate: storedDue,
+    });
+    if (!cursor) {
+      if (storedDue) await schedule.ref.update({ nextDueDate: "", updatedAt: stamp() });
+      continue;
+    }
+    if (cursor !== storedDue && cursor > through) {
+      await schedule.ref.update({ nextDueDate: cursor, updatedAt: stamp() });
+      continue;
+    }
     while (cursor && cursor <= through && (!endDate || cursor <= endDate) && items.length < 62) {
       items.push({ date: cursor, key: occurrenceKey(schedule.id, cursor) });
-      cursor = nextDueDate(cursor, data.frequency, asNumber(data.anchorDay));
+      cursor = nextDueDate(cursor, frequency, asNumber(data.anchorDay));
     }
     if (items.length === 0) continue;
     const db = database();
@@ -564,11 +606,51 @@ export async function cancelRevenue(user: SessionUser, id: string) {
     tx.set(database().collection(collections.activityLogs).doc(), activityRecord({
       userId: user.uid,
       userName: user.displayName,
-      action: "revenue.deleted",
+      action: "revenue.cancelled",
       module: "revenue",
       recordId: id,
       description: "Cancelled received revenue and reversed its account posting.",
       previousValues: { amount: current.amount },
+    }));
+  });
+}
+
+export async function deleteRevenue(user: SessionUser, id: string) {
+  await live();
+  const existing = await revenue().doc(id).get();
+  if (!existing.exists) throw new RecordError("not_found");
+  const current = mapRevenue(existing.id, existing.data()!);
+  await database().runTransaction(async (tx) => {
+    const snap = await tx.get(existing.ref);
+    if (!snap.exists) throw new RecordError("not_found");
+    const projectSnaps = await readRefs(tx, collections.projects, [snap.data()?.projectId]);
+    const accountSnaps = await readRefs(tx, collections.accounts, [snap.data()?.accountId]);
+    const before = collectedContribution(snap.data() ?? null);
+    const projectDeltas = new Map<string, ProjectDelta>();
+    queueProjectDelta(projectDeltas, before.projectId, "collected", -before.amount);
+    commitProjectDeltas(tx, projectSnaps, projectDeltas);
+    syncAccount(
+      tx,
+      user,
+      "revenue",
+      id,
+      current.description,
+      current.date,
+      current.paymentMethod,
+      null,
+      { accountId: current.accountId, amount: current.amount, active: current.status === "received", direction: "in" },
+      { accountId: null, amount: 0, active: false, direction: "in" },
+      accountSnaps,
+    );
+    tx.delete(existing.ref);
+    tx.set(database().collection(collections.activityLogs).doc(), activityRecord({
+      userId: user.uid,
+      userName: user.displayName,
+      action: "revenue.deleted",
+      module: "revenue",
+      recordId: id,
+      description: "Deleted revenue and reversed its project and account effect.",
+      previousValues: { amount: current.amount, description: current.description, status: current.status },
     }));
   });
 }

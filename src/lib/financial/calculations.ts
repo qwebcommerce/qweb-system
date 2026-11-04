@@ -185,6 +185,23 @@ export function nextDueDate(
   return clampDate(nextYear, nextMonth, anchorDay ?? day);
 }
 
+export function resolveNextDue(input: {
+  startDate: string;
+  endDate?: string | null;
+  frequency: ScheduleFrequency;
+  anchorDay?: number;
+  nextDueDate?: string | null;
+}): string {
+  if (!ISO_DATE.test(input.startDate)) return "";
+  const anchor = input.anchorDay && input.anchorDay > 0 ? input.anchorDay : Number(input.startDate.slice(8, 10));
+  const stored = input.nextDueDate && ISO_DATE.test(input.nextDueDate) ? input.nextDueDate : "";
+  const due = !stored || stored <= input.startDate
+    ? nextDueDate(input.startDate, input.frequency, anchor)
+    : stored;
+  if (input.endDate && ISO_DATE.test(input.endDate) && due > input.endDate) return "";
+  return due;
+}
+
 export function pendingOccurrenceDates(
   nextDue: string,
   frequency: ScheduleFrequency,
