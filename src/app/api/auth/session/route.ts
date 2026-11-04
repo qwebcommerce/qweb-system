@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/config/session";
 import { collections } from "@/config/collections";
@@ -7,6 +8,7 @@ import type { Role } from "@/types";
 const roles = new Set<Role>(["administrator", "manager", "staff"]);
 
 export async function POST(request: Request) {
+  await connection();
   if (!isAdminFirebaseConfigured()) {
     return NextResponse.json({ error: "unconfigured" }, { status: 503 });
   }
@@ -44,7 +46,8 @@ export async function POST(request: Request) {
       maxAge: SESSION_MAX_AGE_SECONDS,
     });
     return response;
-  } catch {
+  } catch (error) {
+    console.error("session", error instanceof Error ? error.name : "failed");
     return NextResponse.json({ error: "invalid" }, { status: 401 });
   }
 }

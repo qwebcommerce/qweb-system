@@ -1,7 +1,9 @@
 import "server-only";
-import { cert, getApps, initializeApp, type App, type ServiceAccount } from "firebase-admin/app";
-import { getAuth, type Auth } from "firebase-admin/auth";
-import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { createRequire } from "node:module";
+import path from "node:path";
+import type { App, ServiceAccount } from "firebase-admin/app";
+import type { Auth } from "firebase-admin/auth";
+import type { Firestore } from "firebase-admin/firestore";
 
 interface ServiceAccountFile {
   project_id?: string;
@@ -9,12 +11,29 @@ interface ServiceAccountFile {
   private_key?: string;
 }
 
+function load(name: string) {
+  const require = createRequire(path.join(process.cwd(), "package.json"));
+  return require(name);
+}
+
+function parseServiceAccount(raw: string): ServiceAccountFile {
+  try {
+    return JSON.parse(raw) as ServiceAccountFile;
+  } catch {
+    const repaired = raw.replace(
+      /("private_key"\s*:\s*")([\s\S]*?)("\s*[,}])/,
+      (_match, start: string, key: string, end: string) => `${start}${key.replace(/\r?\n/g, "\\n")}${end}`,
+    );
+    return JSON.parse(repaired) as ServiceAccountFile;
+  }
+}
+
 function readServiceAccount(): ServiceAccount | null {
-  const raw = process.env.FIREBASE_ADMIN_CONFIG?.trim();
+  const raw = process.env.FIREBASE_ADMIN_CONFIG?.trim().replace(/^['"]|['"]$/g, "");
   if (!raw) return null;
 
   try {
-    const parsed = JSON.parse(raw) as ServiceAccountFile;
+    const parsed = parseServiceAccount(raw);
     if (!parsed.project_id || !parsed.client_email || !parsed.private_key) return null;
     return {
       projectId: parsed.project_id,
@@ -26,11 +45,28 @@ function readServiceAccount(): ServiceAccount | null {
   }
 }
 
+function firebaseAppModule(): {
+  cert: (account: ServiceAccount) => object;
+  getApps: () => App[];
+  initializeApp: (options: { credential: object }) => App;
+} {
+  return load("firebase-admin/app");
+}
+
+function firebaseAuthModule(): { getAuth: (app: App) => Auth } {
+  return load("firebase-admin/auth");
+}
+
+function firebaseFirestoreModule(): { getFirestore: (app: App) => Firestore } {
+  return load("firebase-admin/firestore");
+}
+
 export function isAdminFirebaseConfigured(): boolean {
   return readServiceAccount() !== null;
 }
 
 function getAdminApp(): App {
+  const { getApps, initializeApp, cert } = firebaseAppModule();
   if (getApps().length > 0) return getApps()[0]!;
   const serviceAccount = readServiceAccount();
   if (!serviceAccount) {
@@ -43,9 +79,9 @@ function getAdminApp(): App {
 }
 
 export function getAdminAuth(): Auth {
-  return getAuth(getAdminApp());
+  return firebaseAuthModule().getAuth(getAdminApp());
 }
 
 export function getAdminDb(): Firestore {
-  return getFirestore(getAdminApp());
+  return firebaseFirestoreModule().getFirestore(getAdminApp());
 }
