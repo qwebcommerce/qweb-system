@@ -52,8 +52,9 @@ export async function POST(request: Request) {
     return response;
   } catch (error) {
     const code = error && typeof error === "object" && "code" in error ? String(error.code) : error instanceof Error ? error.name : "failed";
-    console.error("session", step, code);
-    return NextResponse.json({ error: "invalid", step, code }, { status: 401 });
+    const detail = error instanceof Error ? error.message.slice(0, 180) : "";
+    console.error("session", step, code, detail);
+    return NextResponse.json({ error: "invalid", step, code, detail }, { status: 401 });
   }
 }
 

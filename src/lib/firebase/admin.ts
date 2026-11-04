@@ -1,4 +1,7 @@
 import "server-only";
+import { createRequire } from "node:module";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { App, ServiceAccount } from "firebase-admin/app";
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
@@ -18,7 +21,43 @@ interface ReadyAdmin {
   Timestamp: FirestoreModule["Timestamp"];
 }
 
-let ready: ReadyAdmin | null = null;
+const globalAdmin = globalThis as typeof globalThis & { __qwebAdmin?: ReadyAdmin };
+
+type AppModule = typeof import("firebase-admin/app");
+type AuthModule = typeof import("firebase-admin/auth");
+
+function firebasePackageRequire() {
+  const starts = [process.cwd()];
+  for (const start of starts) {
+    let dir = start;
+    for (let depth = 0; depth < 6; depth += 1) {
+      const packageJson = path.join(dir, "node_modules", "firebase-admin", "package.json");
+      if (existsSync(packageJson)) return createRequire(packageJson);
+      const parent = path.dirname(dir);
+      if (parent === dir) break;
+      dir = parent;
+    }
+  }
+  throw new Error("firebase-admin is not installed on the server.");
+}
+
+function loadInstalledModules(): [AppModule, AuthModule, FirestoreModule] {
+  const nodeRequire = firebasePackageRequire();
+  const name = "firebase-admin";
+  return [
+    nodeRequire(`${name}/app`),
+    nodeRequire(`${name}/auth`),
+    nodeRequire(`${name}/firestore`),
+  ];
+}
+
+async function loadBundledModules(): Promise<[AppModule, AuthModule, FirestoreModule]> {
+  return Promise.all([
+    import("firebase-admin/app"),
+    import("firebase-admin/auth"),
+    import("firebase-admin/firestore"),
+  ]);
+}
 
 function parseServiceAccount(raw: string): ServiceAccountFile {
   try {
@@ -63,12 +102,20 @@ export function isAdminFirebaseConfigured(): boolean {
 }
 
 export async function readyFirebase(): Promise<ReadyAdmin> {
-  if (ready) return ready;
-  const [{ cert, getApps, initializeApp }, { getAuth }, firestore] = await Promise.all([
-    import("firebase-admin/app"),
-    import("firebase-admin/auth"),
-    import("firebase-admin/firestore"),
-  ]);
+  if (globalAdmin.__qwebAdmin) return globalAdmin.__qwebAdmin;
+  let modules: [AppModule, AuthModule, FirestoreModule];
+  try {
+    modules = loadInstalledModules();
+  } catch (installedError) {
+    try {
+      modules = await loadBundledModules();
+    } catch (bundledError) {
+      const installed = installedError instanceof Error ? installedError.message : "installed load failed";
+      const bundled = bundledError instanceof Error ? bundledError.message : "bundled load failed";
+      throw new Error(`${installed} | ${bundled}`);
+    }
+  }
+  const [{ cert, getApps, initializeApp }, { getAuth }, firestore] = modules;
   const existing = getApps()[0];
   let app: App;
   if (existing) {
@@ -78,31 +125,31 @@ export async function readyFirebase(): Promise<ReadyAdmin> {
     if (!serviceAccount) throw new Error("Firebase Admin is not configured.");
     app = initializeApp({ credential: cert(serviceAccount) });
   }
-  ready = {
+  globalAdmin.__qwebAdmin = {
     auth: getAuth(app),
     db: firestore.getFirestore(app),
     FieldValue: firestore.FieldValue,
     Timestamp: firestore.Timestamp,
   };
-  return ready;
+  return globalAdmin.__qwebAdmin;
 }
 
 export function getAdminAuth(): Auth {
-  if (!ready) throw new Error("Firebase Admin is not ready.");
-  return ready.auth;
+  if (!globalAdmin.__qwebAdmin) throw new Error("Firebase Admin is not ready.");
+  return globalAdmin.__qwebAdmin.auth;
 }
 
 export function getAdminDb(): Firestore {
-  if (!ready) throw new Error("Firebase Admin is not ready.");
-  return ready.db;
+  if (!globalAdmin.__qwebAdmin) throw new Error("Firebase Admin is not ready.");
+  return globalAdmin.__qwebAdmin.db;
 }
 
 export function adminFieldValue(): ReadyAdmin["FieldValue"] {
-  if (!ready) throw new Error("Firebase Admin is not ready.");
-  return ready.FieldValue;
+  if (!globalAdmin.__qwebAdmin) throw new Error("Firebase Admin is not ready.");
+  return globalAdmin.__qwebAdmin.FieldValue;
 }
 
 export function adminTimestamp(): ReadyAdmin["Timestamp"] {
-  if (!ready) throw new Error("Firebase Admin is not ready.");
-  return ready.Timestamp;
+  if (!globalAdmin.__qwebAdmin) throw new Error("Firebase Admin is not ready.");
+  return globalAdmin.__qwebAdmin.Timestamp;
 }
