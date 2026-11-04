@@ -1,14 +1,8 @@
 import "server-only";
 import { connection } from "next/server";
-import {
-  FieldValue,
-  Timestamp,
-  type DocumentData,
-  type Query,
-  type Transaction,
-} from "firebase-admin/firestore";
+import type { DocumentData, Query, Transaction } from "firebase-admin/firestore";
 import { collections } from "@/config/collections";
-import { getAdminDb } from "@/lib/firebase/admin";
+import { adminFieldValue, getAdminDb, readyFirebase } from "@/lib/firebase/admin";
 
 /**
  * Marks the current render as request-time work.
@@ -16,6 +10,7 @@ import { getAdminDb } from "@/lib/firebase/admin";
  */
 export async function live() {
   await connection();
+  await readyFirebase();
 }
 
 export function database() {
@@ -23,11 +18,10 @@ export function database() {
 }
 
 export function stamp() {
-  return FieldValue.serverTimestamp();
+  return adminFieldValue().serverTimestamp();
 }
 
 export function asIso(value: unknown): string {
-  if (value instanceof Timestamp) return value.toDate().toISOString();
   if (value && typeof value === "object" && "toDate" in value && typeof value.toDate === "function") {
     return value.toDate().toISOString();
   }

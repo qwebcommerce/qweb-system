@@ -2,7 +2,7 @@ import { connection } from "next/server";
 import { NextResponse } from "next/server";
 import { SESSION_COOKIE, SESSION_MAX_AGE_SECONDS } from "@/config/session";
 import { collections } from "@/config/collections";
-import { getAdminAuth, getAdminDb, isAdminFirebaseConfigured } from "@/lib/firebase/admin";
+import { getAdminAuth, getAdminDb, isAdminFirebaseConfigured, readyFirebase } from "@/lib/firebase/admin";
 import type { Role } from "@/types";
 
 const roles = new Set<Role>(["administrator", "manager", "staff"]);
@@ -19,6 +19,7 @@ export async function POST(request: Request) {
 
   let step = "verify";
   try {
+    await readyFirebase();
     const decoded = await getAdminAuth().verifyIdToken(idToken);
     step = "profile";
     const snapshot = await getAdminDb().collection(collections.users).doc(decoded.uid).get();

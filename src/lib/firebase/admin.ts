@@ -1,6 +1,4 @@
 import "server-only";
-import { createRequire } from "node:module";
-import path from "node:path";
 import type { App, ServiceAccount } from "firebase-admin/app";
 import type { Auth } from "firebase-admin/auth";
 import type { Firestore } from "firebase-admin/firestore";
@@ -11,10 +9,16 @@ interface ServiceAccountFile {
   private_key?: string;
 }
 
-function load(name: string) {
-  const require = createRequire(path.join(process.cwd(), "package.json"));
-  return require(name);
+type FirestoreModule = typeof import("firebase-admin/firestore");
+
+interface ReadyAdmin {
+  auth: Auth;
+  db: Firestore;
+  FieldValue: FirestoreModule["FieldValue"];
+  Timestamp: FirestoreModule["Timestamp"];
 }
+
+let ready: ReadyAdmin | null = null;
 
 function parseServiceAccount(raw: string): ServiceAccountFile {
   try {
@@ -54,43 +58,51 @@ function readServiceAccount(): ServiceAccount | null {
   }
 }
 
-function firebaseAppModule(): {
-  cert: (account: ServiceAccount) => object;
-  getApps: () => App[];
-  initializeApp: (options: { credential: object }) => App;
-} {
-  return load("firebase-admin/app");
-}
-
-function firebaseAuthModule(): { getAuth: (app: App) => Auth } {
-  return load("firebase-admin/auth");
-}
-
-function firebaseFirestoreModule(): { getFirestore: (app: App) => Firestore } {
-  return load("firebase-admin/firestore");
-}
-
 export function isAdminFirebaseConfigured(): boolean {
   return readServiceAccount() !== null;
 }
 
-function getAdminApp(): App {
-  const { getApps, initializeApp, cert } = firebaseAppModule();
-  if (getApps().length > 0) return getApps()[0]!;
-  const serviceAccount = readServiceAccount();
-  if (!serviceAccount) {
-    throw new Error("Firebase Admin is not configured.");
+export async function readyFirebase(): Promise<ReadyAdmin> {
+  if (ready) return ready;
+  const [{ cert, getApps, initializeApp }, { getAuth }, firestore] = await Promise.all([
+    import("firebase-admin/app"),
+    import("firebase-admin/auth"),
+    import("firebase-admin/firestore"),
+  ]);
+  const existing = getApps()[0];
+  let app: App;
+  if (existing) {
+    app = existing;
+  } else {
+    const serviceAccount = readServiceAccount();
+    if (!serviceAccount) throw new Error("Firebase Admin is not configured.");
+    app = initializeApp({ credential: cert(serviceAccount) });
   }
-
-  return initializeApp({
-    credential: cert(serviceAccount),
-  });
+  ready = {
+    auth: getAuth(app),
+    db: firestore.getFirestore(app),
+    FieldValue: firestore.FieldValue,
+    Timestamp: firestore.Timestamp,
+  };
+  return ready;
 }
 
 export function getAdminAuth(): Auth {
-  return firebaseAuthModule().getAuth(getAdminApp());
+  if (!ready) throw new Error("Firebase Admin is not ready.");
+  return ready.auth;
 }
 
 export function getAdminDb(): Firestore {
-  return firebaseFirestoreModule().getFirestore(getAdminApp());
+  if (!ready) throw new Error("Firebase Admin is not ready.");
+  return ready.db;
+}
+
+export function adminFieldValue(): ReadyAdmin["FieldValue"] {
+  if (!ready) throw new Error("Firebase Admin is not ready.");
+  return ready.FieldValue;
+}
+
+export function adminTimestamp(): ReadyAdmin["Timestamp"] {
+  if (!ready) throw new Error("Firebase Admin is not ready.");
+  return ready.Timestamp;
 }

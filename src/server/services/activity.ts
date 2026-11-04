@@ -1,8 +1,7 @@
 import "server-only";
-import { FieldValue } from "firebase-admin/firestore";
 import { collections } from "@/config/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
-import { live } from "@/server/db";
+import { live, stamp } from "@/server/db";
 import type { ActivityModule } from "@/types";
 
 const sensitiveKeys = new Set([
@@ -47,7 +46,7 @@ export function activityRecord(input: {
     description: input.description,
     previousValues: sanitizeActivityValue(input.previousValues ?? null),
     newValues: sanitizeActivityValue(input.newValues ?? null),
-    createdAt: FieldValue.serverTimestamp(),
+    createdAt: stamp(),
   };
 }
 export async function recordActivity(

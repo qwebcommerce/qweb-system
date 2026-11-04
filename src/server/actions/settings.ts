@@ -1,12 +1,12 @@
 "use server";
 
-import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 import { collections } from "@/config/collections";
 import { can } from "@/config/permissions";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { requireUser } from "@/server/auth/session";
 import { sanitizeActivityValue } from "@/server/services/activity";
+import { stamp } from "@/server/db";
 import { getCompanySettings } from "@/server/services/settings";
 
 const companySchema = z.object({
@@ -39,7 +39,7 @@ export async function updateCompanySettings(input: unknown): Promise<SettingsRes
       ...parsed.data,
       currency: parsed.data.currency.toUpperCase(),
       logoUrl: previous.logoUrl,
-      updatedAt: FieldValue.serverTimestamp(),
+      updatedAt: stamp(),
     };
 
     const db = getAdminDb();
@@ -54,7 +54,7 @@ export async function updateCompanySettings(input: unknown): Promise<SettingsRes
       description: "Updated company settings.",
       previousValues: sanitizeActivityValue({ ...previous }),
       newValues: sanitizeActivityValue(parsed.data),
-      createdAt: FieldValue.serverTimestamp(),
+      createdAt: stamp(),
     });
     await batch.commit();
     return { ok: true };

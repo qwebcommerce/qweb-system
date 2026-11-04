@@ -1,7 +1,6 @@
 "use server";
 
 import { timingSafeEqual } from "node:crypto";
-import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 import { collections } from "@/config/collections";
 import { DEFAULT_CURRENCY, DEFAULT_DATE_FORMAT } from "@/config/currency";
@@ -12,7 +11,8 @@ import {
   revenueCategorySeeds,
   type SeedCategory,
 } from "@/config/seed";
-import { getAdminAuth, getAdminDb, isAdminFirebaseConfigured } from "@/lib/firebase/admin";
+import { getAdminAuth, getAdminDb, isAdminFirebaseConfigured, readyFirebase } from "@/lib/firebase/admin";
+import { stamp } from "@/server/db";
 import { sanitizeActivityValue } from "@/server/services/activity";
 
 const setupSchema = z.object({
@@ -49,6 +49,7 @@ export async function createFirstAdministrator(input: {
     return { ok: false, error: "secret" };
   }
 
+  await readyFirebase();
   const auth = getAdminAuth();
   const db = getAdminDb();
   const systemRef = db.collection(collections.settings).doc("system");
@@ -80,7 +81,7 @@ export async function createFirstAdministrator(input: {
         throw new Error("bootstrapped");
       }
 
-      const now = FieldValue.serverTimestamp();
+      const now = stamp();
       transaction.set(systemRef, {
         bootstrapped: true,
         bootstrappedAt: now,
@@ -152,7 +153,7 @@ function writeCategories(
   seeds: SeedCategory[],
   userId: string,
 ) {
-  const now = FieldValue.serverTimestamp();
+  const now = stamp();
   for (const seed of seeds) {
     transaction.set(db.collection(collectionName).doc(seed.id), {
       name: seed.name,
