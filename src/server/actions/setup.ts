@@ -62,13 +62,12 @@ export async function createFirstAdministrator(input: {
   let createdUid: string | null = null;
 
   try {
-    const user = await auth.createUser({
+    const user = await findOrCreateAdministrator(auth, {
       email,
       password: parsed.data.password,
       displayName: parsed.data.name,
-      disabled: false,
     });
-    createdUid = user.uid;
+    createdUid = user.created ? user.uid : null;
 
     await auth.setCustomUserClaims(user.uid, {
       role: "administrator",
@@ -139,11 +138,39 @@ export async function createFirstAdministrator(input: {
     if (error instanceof Error && error.message === "bootstrapped") {
       return { ok: false, error: "bootstrapped" };
     }
-    const code = typeof error === "object" && error && "code" in error ? String(error.code) : "";
+    const code = authCode(error);
     if (code.includes("email-already-exists")) return { ok: false, error: "exists" };
     if (code.includes("configuration-not-found")) return { ok: false, error: "auth_disabled" };
     return { ok: false, error: "failed" };
   }
+}
+
+async function findOrCreateAdministrator(
+  auth: ReturnType<typeof getAdminAuth>,
+  input: { email: string; password: string; displayName: string },
+) {
+  try {
+    const user = await auth.createUser({
+      email: input.email,
+      password: input.password,
+      displayName: input.displayName,
+      disabled: false,
+    });
+    return { uid: user.uid, created: true };
+  } catch (error) {
+    if (!authCode(error).includes("email-already-exists")) throw error;
+    const existing = await auth.getUserByEmail(input.email);
+    await auth.updateUser(existing.uid, {
+      password: input.password,
+      displayName: input.displayName,
+      disabled: false,
+    });
+    return { uid: existing.uid, created: false };
+  }
+}
+
+function authCode(error: unknown) {
+  return typeof error === "object" && error && "code" in error ? String(error.code) : "";
 }
 
 function writeCategories(

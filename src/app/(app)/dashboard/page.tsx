@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { DashboardScreen } from "@/components/dashboard/dashboard-screen";
 import type { Period } from "@/lib/dates";
-import { requireUser } from "@/server/auth/session";
+import { getSessionUser } from "@/server/auth/session";
 import { loadDashboard } from "@/server/services/dashboard";
 
 export const metadata: Metadata = { title: "Dashboard" };
@@ -28,7 +28,8 @@ async function DashboardContent({
 }) {
   const query = await searchParams;
   const period = periods.has(query.period as Period) ? (query.period as Period) : "month";
-  const user = await requireUser();
+  const user = await getSessionUser();
+  if (!user) return null;
   const data = await loadDashboard(user, period, { from: query.from, to: query.to });
   return <DashboardScreen data={data} period={period} />;
 }
