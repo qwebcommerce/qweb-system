@@ -10,33 +10,47 @@ import { cn } from "@/lib/utils";
 import type { DashboardData } from "@/server/services/dashboard";
 
 const periods = ["today", "week", "month", "year", "custom"] as const;
+
+function shortMonth(value: string) {
+  const [year, month] = value.split("-");
+  if (!year || !month) return value;
+  return `${month}/${year.slice(2)}`;
+}
+
+function shortAmount(value: number) {
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (abs >= 1_000) return `${Math.round(value / 1_000)}k`;
+  return String(value);
+}
+
 const slices = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-5)"];
 const panelClass = "border-t-2 border-[#550000] bg-[#faf6f6] ring-[#550000]/15 dark:bg-[#160909] dark:ring-[#550000]/40";
 
 export function DashboardScreen({ data, period }: { data: DashboardData; period: string }) {
   const { t } = useI18n();
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex w-full min-w-0 flex-col gap-6">
       <section>
         <p className="text-sm leading-6 text-muted-foreground">{t("dashboard.intro")}</p>
       </section>
-      <Panel className={cn(panelClass, "p-5 md:p-6")}>
-        <form className="flex flex-col gap-5 md:flex-row md:items-end" method="get">
-          <label className="flex w-full flex-col gap-2 md:w-56">
+      <Panel className={cn(panelClass, "p-4 sm:p-5 md:p-6")}>
+        <form className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:items-end" method="get">
+          <label className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:w-56">
             <span className="text-sm font-medium">{t("dashboard.period")}</span>
-            <select className={controlClass} name="period" defaultValue={period}>
+            <select className={cn(controlClass, "max-w-full")} name="period" defaultValue={period}>
               {periods.map((item) => <option key={item} value={item}>{t(`dashboard.${item}`)}</option>)}
             </select>
           </label>
-          <label className="flex w-full flex-col gap-2 md:w-48">
+          <label className="flex min-w-0 flex-col gap-2 lg:w-48">
             <span className="text-sm font-medium">{t("dashboard.from")}</span>
-            <Input className="numeric h-10 w-full" type="date" name="from" defaultValue={data.range.from} />
+            <Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" name="from" defaultValue={data.range.from} />
           </label>
-          <label className="flex w-full flex-col gap-2 md:w-48">
+          <label className="flex min-w-0 flex-col gap-2 lg:w-48">
             <span className="text-sm font-medium">{t("dashboard.to")}</span>
-            <Input className="numeric h-10 w-full" type="date" name="to" defaultValue={data.range.to} />
+            <Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" name="to" defaultValue={data.range.to} />
           </label>
-          <Button type="submit" variant="outline" className="h-10 shrink-0 px-6">{t("dashboard.apply")}</Button>
+          <Button type="submit" variant="outline" className="h-10 w-full shrink-0 px-6 sm:col-span-2 lg:w-auto">{t("dashboard.apply")}</Button>
         </form>
       </Panel>
       {data.kind === "finance" && data.figures ? (
@@ -52,15 +66,15 @@ export function DashboardScreen({ data, period }: { data: DashboardData; period:
             <Stat label={t("dashboard.labor")} amount={data.figures.labor} />
             <Stat label={t("dashboard.payroll")} amount={data.figures.payroll} />
           </div>
-          <div className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-            <Panel className={panelClass}>
+          <div className="grid min-w-0 gap-4 xl:grid-cols-[1.4fr_0.8fr]">
+            <Panel className={cn(panelClass, "min-w-0 overflow-hidden")}>
               <h2 className="mb-3 font-medium">{t("dashboard.chart")}</h2>
-              <div className="h-72">
+              <div className="h-64 w-full min-w-0 sm:h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.chart}>
+                  <BarChart data={data.chart} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis dataKey="month" />
-                    <YAxis />
+                    <XAxis dataKey="month" tickFormatter={shortMonth} tick={{ fontSize: 11 }} interval="preserveStartEnd" minTickGap={12} />
+                    <YAxis width={40} tickFormatter={shortAmount} tick={{ fontSize: 11 }} />
                     <Tooltip />
                     <Bar dataKey="revenue" fill="var(--chart-1)" name={t("dashboard.revenue")} />
                     <Bar dataKey="expenses" fill="var(--chart-2)" name={t("dashboard.expenses")} />
@@ -68,12 +82,12 @@ export function DashboardScreen({ data, period }: { data: DashboardData; period:
                 </ResponsiveContainer>
               </div>
             </Panel>
-            <Panel className={panelClass}>
+            <Panel className={cn(panelClass, "min-w-0 overflow-hidden")}>
               <h2 className="mb-3 font-medium">{t("dashboard.breakdown")}</h2>
-              <div className="h-52">
+              <div className="h-52 w-full min-w-0">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={data.breakdown.filter((item) => item.amount > 0)} dataKey="amount" nameKey="key" innerRadius={45} outerRadius={75}>
+                    <Pie data={data.breakdown.filter((item) => item.amount > 0)} dataKey="amount" nameKey="key" innerRadius="42%" outerRadius="72%">
                       {data.breakdown.filter((item) => item.amount > 0).map((item, index) => <Cell key={item.key} fill={slices[index % slices.length]} />)}
                     </Pie>
                     <Tooltip />
@@ -82,9 +96,9 @@ export function DashboardScreen({ data, period }: { data: DashboardData; period:
               </div>
               <ul className="space-y-1 text-sm">
                 {data.breakdown.map((item) => (
-                  <li key={item.key} className="flex items-center justify-between gap-3">
-                    <span>{t(`dashboard.${item.key}`)}</span>
-                    <Money amount={item.amount} />
+                  <li key={item.key} className="flex items-start justify-between gap-3">
+                    <span className="min-w-0 break-words">{t(`dashboard.${item.key}`)}</span>
+                    <span className="shrink-0"><Money amount={item.amount} /></span>
                   </li>
                 ))}
               </ul>
@@ -111,11 +125,11 @@ export function DashboardScreen({ data, period }: { data: DashboardData; period:
       <Panel className={panelClass}>
         <h2 className="mb-3 font-medium">{t("dashboard.tasks")}</h2>
         {data.tasks.length === 0 ? <p className="text-sm text-muted-foreground">{t("tasks.empty")}</p> : (
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             {data.tasks.map((task) => (
-              <li key={task.id} className="flex items-center justify-between gap-3">
-                <Link className="text-primary" href="/operations/tasks">{task.description}</Link>
-                <span className="flex items-center gap-2"><DateText value={task.taskDate} /><StatusBadge value={task.status} /></span>
+              <li key={task.id} className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <Link className="min-w-0 break-words text-primary" href="/operations/tasks">{task.description}</Link>
+                <span className="flex flex-wrap items-center gap-2 sm:shrink-0"><DateText value={task.taskDate} /><StatusBadge value={task.status} /></span>
               </li>
             ))}
           </ul>
@@ -137,7 +151,7 @@ function Stat({ label, amount, tone = "default" }: { label: string; amount: numb
       )}
     >
       <p className={cn("text-sm", emphasis ? "text-white/75" : "text-[#550000] dark:text-[#d4b4b4]")}>{label}</p>
-      <p className="mt-2 text-xl font-semibold"><Money amount={amount} /></p>
+      <p className="mt-2 break-words text-lg font-semibold leading-tight sm:text-xl"><Money amount={amount} /></p>
     </section>
   );
 }
@@ -148,11 +162,11 @@ function RecordList({ title, rows }: { title: string; rows: Array<{ id: string; 
     <Panel className={panelClass}>
       <h2 className="mb-3 font-medium">{title}</h2>
       {rows.length === 0 ? <p className="text-sm text-muted-foreground">{t("common.empty")}</p> : (
-        <ul className="space-y-2 text-sm">
+        <ul className="space-y-3 text-sm">
           {rows.map((row) => (
-            <li key={row.id} className="flex items-center justify-between gap-3">
-              {row.href ? <Link className="truncate text-primary" href={row.href}>{row.title}</Link> : <span className="truncate">{row.title}</span>}
-              <span className="flex shrink-0 items-center gap-2">
+            <li key={row.id} className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+              {row.href ? <Link className="min-w-0 break-words text-primary" href={row.href}>{row.title}</Link> : <span className="min-w-0 break-words">{row.title}</span>}
+              <span className="flex flex-wrap items-center gap-2 sm:shrink-0">
                 <DateText value={row.date} />
                 {typeof row.amount === "number" ? <Money amount={row.amount} /> : null}
                 {row.status ? <StatusBadge value={row.status} /> : null}

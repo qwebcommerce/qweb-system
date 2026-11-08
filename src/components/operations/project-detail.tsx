@@ -69,22 +69,22 @@ export function ProjectDetail({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="numeric text-sm text-muted-foreground">{project.code}</p>
-          <h2 className="text-xl font-semibold">{project.title}</h2>
-          <p className="text-sm text-muted-foreground">{project.clientName}</p>
+          <h2 className="break-words text-xl font-semibold">{project.title}</h2>
+          <p className="break-words text-sm text-muted-foreground">{project.clientName}</p>
         </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
-          <Button type="button" variant="destructive" onClick={() => void removeProject()}>{t("projects.remove")}</Button>
+        <div className="grid grid-cols-2 gap-2 sm:flex">
+          <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
+          <Button type="button" variant="destructive" className="w-full sm:w-auto" onClick={() => void removeProject()}>{t("projects.remove")}</Button>
         </div>
       </div>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
         {tabs.map((item) => (
-          <Button key={item} type="button" size="sm" variant={tab === item ? "default" : "outline"} onClick={() => setTab(item)}>
+          <Button key={item} type="button" size="sm" className="shrink-0" variant={tab === item ? "default" : "outline"} onClick={() => setTab(item)}>
             {t(`projects.${item}`)}
           </Button>
         ))}
@@ -106,8 +106,8 @@ export function ProjectDetail({
         <Panel>
           <ul className="space-y-2 text-sm">
             {tasks.map((task) => (
-              <li key={task.id} className="flex items-center justify-between gap-3">
-                <span>{task.description}</span>
+              <li key={task.id} className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <span className="min-w-0 break-words">{task.description}</span>
                 <StatusBadge value={task.status} />
               </li>
             ))}
@@ -116,29 +116,29 @@ export function ProjectDetail({
         </Panel>
       ) : null}
       {tab === "team" ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Panel>
+        <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+          <Panel className="min-w-0">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="font-medium">{t("projects.team")}</h3>
             </div>
             <MemberForm projectId={project.id} employees={employees} memberIds={members.map((member) => member.employeeId)} />
             <ul className="mt-4 divide-y divide-[#550000]/10 text-sm">
               {members.map((member) => (
-                <li key={member.id} className="grid grid-cols-[minmax(0,1fr)_8rem_auto] items-center gap-3 py-2">
-                  <span className="truncate">{names.get(member.employeeId) ?? member.employeeId}</span>
-                  <span className="truncate text-muted-foreground">{member.role || "—"}</span>
+                <li key={member.id} className="flex flex-col gap-1 py-2 sm:grid sm:grid-cols-[minmax(0,1fr)_8rem_auto] sm:items-center sm:gap-3">
+                  <span className="min-w-0 break-words">{names.get(member.employeeId) ?? member.employeeId}</span>
+                  <span className="min-w-0 break-words text-muted-foreground">{member.role || "—"}</span>
                   <RemoveMember id={member.id} />
                 </li>
               ))}
             </ul>
           </Panel>
-          <Panel>
-            <div className="mb-3 flex items-center justify-between">
+          <Panel className="min-w-0">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <h3 className="font-medium">{t("fields.labor")}</h3>
-              <Button type="button" size="sm" onClick={() => setLaborOpen(true)}>{t("projects.labor")}</Button>
+              <Button type="button" size="sm" className="w-full sm:w-auto" onClick={() => setLaborOpen(true)}>{t("projects.labor")}</Button>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full table-fixed border-collapse text-sm">
+            <div className="min-w-0 overflow-x-auto">
+              <table className="w-full min-w-[36rem] table-fixed border-collapse text-sm">
                 <thead>
                   <tr>
                     <th className="w-[28%] px-2 py-2 text-start font-medium">{t("fields.employee")}</th>
@@ -151,10 +151,10 @@ export function ProjectDetail({
                 <tbody>
                   {labor.map((item) => (
                     <tr key={item.id} className="border-t border-[#550000]/10">
-                      <td className="px-2 py-2 text-start">{names.get(item.employeeId) ?? item.employeeId}</td>
-                      <td className="px-2 py-2 text-start"><DateText value={item.date} /></td>
-                      <td className="numeric px-2 py-2 text-start">{item.hours}</td>
-                      <td className="px-2 py-2 text-start"><Money amount={item.totalCost} /></td>
+                      <td className="px-2 py-2 text-start break-words">{names.get(item.employeeId) ?? item.employeeId}</td>
+                      <td className="px-2 py-2 text-start whitespace-nowrap"><DateText value={item.date} /></td>
+                      <td className="numeric px-2 py-2 text-start whitespace-nowrap">{item.hours}</td>
+                      <td className="px-2 py-2 text-start whitespace-nowrap"><Money amount={item.totalCost} /></td>
                       <td className="px-2 py-2 text-start"><RemoveLabor id={item.id} /></td>
                     </tr>
                   ))}
@@ -191,7 +191,7 @@ function Metric({ label, amount }: { label: string; amount: number; hint?: strin
   return (
     <Panel>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-2 text-lg font-semibold"><Money amount={amount} /></p>
+      <p className="mt-2 break-words text-lg font-semibold"><Money amount={amount} /></p>
     </Panel>
   );
 }
@@ -199,7 +199,7 @@ function Metric({ label, amount }: { label: string; amount: number; hint?: strin
 function MoneyRows({ rows }: { rows: Array<{ id: string; title: string; amount: number; date: string; status: string }> }) {
   const { t } = useI18n();
   return (
-    <Panel>
+    <Panel className="min-w-0 overflow-hidden">
       {rows.length === 0 ? <p className="text-sm text-muted-foreground">{t("common.empty")}</p> : (
         <DataTable>
           <tbody>
@@ -232,12 +232,12 @@ function MemberForm({ projectId, employees, memberIds }: { projectId: string; em
   }
 
   return (
-    <form className="flex flex-wrap items-center gap-3" onSubmit={(event) => void submit(event)}>
-      <select className={cn(controlClass, "w-auto min-w-48 flex-1")} value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} aria-label={t("fields.employee")}>
+    <form className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center" onSubmit={(event) => void submit(event)}>
+      <select className={cn(controlClass, "min-w-0 max-w-full")} value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} aria-label={t("fields.employee")}>
         {available.map((employee) => <option key={employee.id} value={employee.id}>{employee.fullName}</option>)}
       </select>
-      <Input className="h-10 w-40" value={role} onChange={(event) => setRole(event.target.value)} placeholder={t("fields.role")} aria-label={t("fields.role")} />
-      <Button type="submit" className="h-10 shrink-0 px-5" disabled={!employeeId}>{t("projects.assign")}</Button>
+      <Input className="h-10 w-full min-w-0" value={role} onChange={(event) => setRole(event.target.value)} placeholder={t("fields.role")} aria-label={t("fields.role")} />
+      <Button type="submit" className="h-10 w-full px-5 sm:w-auto" disabled={!employeeId}>{t("projects.assign")}</Button>
       {error ? <p className="w-full text-sm text-destructive">{error}</p> : null}
     </form>
   );
@@ -291,7 +291,7 @@ function LaborForm({ projectId, employees, onClose }: { projectId: string; emplo
           </select>
         </Field>
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label={t("fields.date")}><Input className="numeric h-10" type="date" {...form.register("date")} /></Field>
+          <Field label={t("fields.date")}><Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" {...form.register("date")} /></Field>
           <Field label={t("fields.hours")}><Input className="numeric h-10" type="number" min="0.25" step="0.25" {...form.register("hours")} /></Field>
           <Field label={t("fields.hourlyCost")}><Input className="numeric h-10" type="number" min="0" step="0.01" {...form.register("hourlyCost")} /></Field>
         </div>

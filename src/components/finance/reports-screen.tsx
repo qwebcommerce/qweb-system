@@ -34,27 +34,27 @@ export function ReportsScreen({ data, period }: { data: DashboardData; period: s
   }
 
   return (
-    <div className="flex w-full flex-col gap-6">
+    <div className="flex w-full min-w-0 flex-col gap-6">
       <p className="text-sm leading-6 text-muted-foreground">{t("reports.intro")}</p>
-      <Panel className={cn(panelClass, "p-5 md:p-6")}>
-        <form className="flex flex-col gap-5 lg:flex-row lg:items-end" method="get">
-          <label className="flex w-full flex-col gap-2 lg:w-56">
+      <Panel className={cn(panelClass, "p-4 sm:p-5 md:p-6")}>
+        <form className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:flex lg:items-end" method="get">
+          <label className="flex min-w-0 flex-col gap-2 sm:col-span-2 lg:w-56">
             <span className="text-sm font-medium">{t("dashboard.period")}</span>
-            <select className={controlClass} name="period" defaultValue={period}>
+            <select className={cn(controlClass, "max-w-full")} name="period" defaultValue={period}>
               {periods.map((item) => <option key={item} value={item}>{t(`dashboard.${item}`)}</option>)}
             </select>
           </label>
-          <label className="flex w-full flex-col gap-2 lg:w-48">
+          <label className="flex min-w-0 flex-col gap-2 lg:w-48">
             <span className="text-sm font-medium">{t("dashboard.from")}</span>
-            <Input className="numeric h-10 w-full" type="date" name="from" defaultValue={data.range.from} />
+            <Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" name="from" defaultValue={data.range.from} />
           </label>
-          <label className="flex w-full flex-col gap-2 lg:w-48">
+          <label className="flex min-w-0 flex-col gap-2 lg:w-48">
             <span className="text-sm font-medium">{t("dashboard.to")}</span>
-            <Input className="numeric h-10 w-full" type="date" name="to" defaultValue={data.range.to} />
+            <Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" name="to" defaultValue={data.range.to} />
           </label>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="submit" variant="outline" className="h-10 shrink-0 px-6">{t("dashboard.apply")}</Button>
-            <Button type="button" variant="outline" className="h-10 shrink-0 px-6" onClick={exportReport}>{t("reports.export")}</Button>
+          <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:flex lg:w-auto">
+            <Button type="submit" variant="outline" className="h-10 w-full px-6 lg:w-auto">{t("dashboard.apply")}</Button>
+            <Button type="button" variant="outline" className="h-10 w-full px-6 lg:w-auto" onClick={exportReport}>{t("reports.export")}</Button>
           </div>
         </form>
       </Panel>
@@ -68,11 +68,11 @@ export function ReportsScreen({ data, period }: { data: DashboardData; period: s
           <Stat label={t("dashboard.labor")} amount={figures.labor} />
         </div>
       ) : null}
-      <Panel className="overflow-hidden p-0 md:p-0">
-        <h2 className="px-5 py-4 font-medium">{t("reports.projectProfit")}</h2>
-        {data.projects.length === 0 ? <p className="px-5 pb-5 text-sm text-muted-foreground">{t("projects.empty")}</p> : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-sm">
+      <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+        <h2 className="px-4 py-4 font-medium sm:px-5">{t("reports.projectProfit")}</h2>
+        {data.projects.length === 0 ? <p className="px-4 pb-5 text-sm text-muted-foreground sm:px-5">{t("projects.empty")}</p> : (
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[40rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
                   <th className={cn("w-[40%]", headClass)}>{t("fields.name")}</th>
@@ -84,10 +84,10 @@ export function ReportsScreen({ data, period }: { data: DashboardData; period: s
               <tbody>
                 {data.projects.map((project) => (
                   <tr key={project.id} className="border-t border-[#550000]/10">
-                    <td className="px-5 py-3 text-start"><Link className="font-medium text-primary" href={`/operations/projects/${project.id}`}>{project.title}</Link></td>
-                    <td className="px-5 py-3 text-start"><Money amount={project.expenses} /></td>
-                    <td className="px-5 py-3 text-start"><Money amount={project.labor} /></td>
-                    <td className="px-5 py-3 text-start"><Money amount={project.profit} /></td>
+                    <td className="px-3 py-3 text-start md:px-5"><Link className="font-medium break-words text-primary" href={`/operations/projects/${project.id}`}>{project.title}</Link></td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={project.expenses} /></td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={project.labor} /></td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={project.profit} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -95,11 +95,11 @@ export function ReportsScreen({ data, period }: { data: DashboardData; period: s
           </div>
         )}
       </Panel>
-      <Panel className="overflow-hidden p-0 md:p-0">
-        <h2 className="px-5 py-4 font-medium">{t("reports.laborReport")}</h2>
-        {data.laborByEmployee.length === 0 ? <p className="px-5 pb-5 text-sm text-muted-foreground">{t("common.empty")}</p> : (
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-sm">
+      <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+        <h2 className="px-4 py-4 font-medium sm:px-5">{t("reports.laborReport")}</h2>
+        {data.laborByEmployee.length === 0 ? <p className="px-4 pb-5 text-sm text-muted-foreground sm:px-5">{t("common.empty")}</p> : (
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[32rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
                   <th className={cn("w-[50%]", headClass)}>{t("fields.employee")}</th>
@@ -110,9 +110,9 @@ export function ReportsScreen({ data, period }: { data: DashboardData; period: s
               <tbody>
                 {data.laborByEmployee.map((employee) => (
                   <tr key={employee.id} className="border-t border-[#550000]/10">
-                    <td className="px-5 py-3 text-start font-medium">{employee.name}</td>
-                    <td className="numeric px-5 py-3 text-start">{employee.hours}</td>
-                    <td className="px-5 py-3 text-start"><Money amount={employee.cost} /></td>
+                    <td className="px-3 py-3 text-start font-medium break-words md:px-5">{employee.name}</td>
+                    <td className="numeric px-3 py-3 text-start md:px-5">{employee.hours}</td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={employee.cost} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -144,7 +144,7 @@ function Stat({ label, amount, tone = "default" }: { label: string; amount: numb
       )}
     >
       <p className={cn("text-sm", emphasis ? "text-white/75" : "text-[#550000] dark:text-[#d4b4b4]")}>{label}</p>
-      <p className="mt-2 text-xl font-semibold"><Money amount={amount} /></p>
+      <p className="mt-2 break-words text-lg font-semibold leading-tight sm:text-xl"><Money amount={amount} /></p>
     </section>
   );
 }

@@ -119,39 +119,39 @@ export function ExpensesScreen({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("expenses.hint")}</p>
-      <Panel className="p-5 md:p-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <form className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center" method="get">
-            <Input className="h-10 w-full sm:max-w-sm" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
-            <select className={`${controlClass} sm:w-48`} name="status" defaultValue={query.status ?? "all"} aria-label={t("fields.status")}>
+      <Panel className="p-4 sm:p-5 md:p-6">
+        <div className="flex min-w-0 flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+          <form className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-center" method="get">
+            <Input className="h-10 w-full min-w-0 sm:col-span-2 lg:col-span-1" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
+            <select className={`${controlClass} min-w-0 max-w-full`} name="status" defaultValue={query.status ?? "all"} aria-label={t("fields.status")}>
               <option value="all">{t("common.all")}</option>
               {statuses.map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}
             </select>
-            <Button type="submit" variant="outline" className="h-10 shrink-0 px-6">{t("common.search")}</Button>
+            <Button type="submit" variant="outline" className="h-10 w-full px-6 sm:col-span-2 lg:col-span-1 lg:w-auto">{t("common.search")}</Button>
           </form>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => void generate()}>{t("expenses.generate")}</Button>
-            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => { setEditingSchedule(null); setScheduleOpen(true); }}>{t("expenses.schedule")}</Button>
-            <Button type="button" variant="outline" className="h-10 px-4" onClick={() => void exportRows()}>{t("common.export")}</Button>
-            <Button type="button" className="h-10 shrink-0 px-6" onClick={() => { setEditing(null); setOpen(true); }}>{t("expenses.add")}</Button>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <Button type="button" variant="outline" className="h-10 w-full px-4 sm:w-auto" onClick={() => void generate()}>{t("expenses.generate")}</Button>
+            <Button type="button" variant="outline" className="h-10 w-full px-4 sm:w-auto" onClick={() => { setEditingSchedule(null); setScheduleOpen(true); }}>{t("expenses.schedule")}</Button>
+            <Button type="button" variant="outline" className="h-10 w-full px-4 sm:w-auto" onClick={() => void exportRows()}>{t("common.export")}</Button>
+            <Button type="button" className="h-10 w-full px-6 sm:w-auto" onClick={() => { setEditing(null); setOpen(true); }}>{t("expenses.add")}</Button>
           </div>
         </div>
         <p className="mt-4 text-sm text-muted-foreground">{t("expenses.periodTotal")}: <Money amount={shown} /></p>
         {message ? <p className="mt-2 text-sm text-destructive">{message}</p> : null}
       </Panel>
       {page.items.length === 0 ? <EmptyState>{t("expenses.empty")}</EmptyState> : (
-        <Panel className="overflow-hidden p-0 md:p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-sm">
+        <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="w-[28%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.title")}</th>
-                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.amount")}</th>
-                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.dueDate")}</th>
-                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
-                  <th className="w-[28%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
+                  <th className="w-[26%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.title")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.amount")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.dueDate")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.status")}</th>
+                  <th className="w-[28%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -159,14 +159,14 @@ export function ExpensesScreen({
                   const payroll = expense.sourceType === "payroll";
                   return (
                     <tr key={expense.id} className="border-t border-[#550000]/10">
-                      <td className="px-5 py-3 text-start">
-                        <span className="font-medium">{expense.title}</span>
+                      <td className="px-3 py-3 text-start md:px-5">
+                        <span className="font-medium break-words">{expense.title}</span>
                         {expense.isRecurringOccurrence ? <span className="mt-1 block text-xs text-muted-foreground">{t("expenses.schedule")}</span> : null}
                       </td>
-                      <td className="px-5 py-3 text-start"><Money amount={expense.amount} /></td>
-                      <td className="px-5 py-3 text-start"><DateText value={expense.dueDate} /></td>
-                      <td className="px-5 py-3 text-start"><StatusBadge value={expense.status} /></td>
-                      <td className="px-5 py-3 text-start">
+                      <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={expense.amount} /></td>
+                      <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><DateText value={expense.dueDate} /></td>
+                      <td className="px-3 py-3 text-start md:px-5"><StatusBadge value={expense.status} /></td>
+                      <td className="px-3 py-3 text-start md:px-5">
                         <div className="flex flex-wrap items-center gap-1">
                           <Button type="button" variant="outline" size="sm" onClick={() => setViewing(expense)}>{t("common.view")}</Button>
                           {payroll ? null : <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(expense); setOpen(true); }}>{t("common.edit")}</Button>}
@@ -191,10 +191,10 @@ export function ExpensesScreen({
       <Panel>
         <h2 className="mb-3 font-medium">{t("expenses.schedules")}</h2>
         {schedules.length === 0 ? <p className="text-sm text-muted-foreground">{t("common.empty")}</p> : (
-          <ul className="space-y-2 text-sm">
+          <ul className="space-y-3 text-sm">
             {schedules.map((schedule) => (
-              <li key={schedule.id} className="flex flex-wrap items-center justify-between gap-3">
-                <span>{schedule.title} · <Money amount={schedule.amount} /> · {t(`status.${schedule.frequency}`)}</span>
+              <li key={schedule.id} className="flex flex-col gap-2 border-b border-[#550000]/10 pb-3 last:border-0 last:pb-0 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <span className="min-w-0 break-words">{schedule.title} · <Money amount={schedule.amount} /> · {t(`status.${schedule.frequency}`)}</span>
                 <span className="text-muted-foreground">{t("fields.nextDue")} <DateText value={resolveNextDue(schedule)} /></span>
                 <div className="flex flex-wrap items-center gap-1">
                   <Button type="button" variant="outline" size="sm" onClick={() => { setEditingSchedule(schedule); setScheduleOpen(true); }}>{t("common.edit")}</Button>

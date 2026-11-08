@@ -60,42 +60,42 @@ export function ClientsScreen({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <Panel className="p-5 md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <form className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center" method="get">
-            <Input className="h-10 w-full sm:max-w-sm" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <Panel className="p-4 sm:p-5 md:p-6">
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center">
+          <form className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-center" method="get">
+            <Input className="h-10 w-full min-w-0 sm:col-span-2 lg:col-span-1" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
             <StatusSelect value={query.status} />
-            <Button type="submit" variant="outline" className="h-10 shrink-0 px-6">{t("common.search")}</Button>
+            <Button type="submit" variant="outline" className="h-10 w-full px-6 sm:col-span-2 lg:col-span-1 lg:w-auto">{t("common.search")}</Button>
           </form>
-          <Button type="button" className="h-10 shrink-0 px-6" onClick={() => { setEditing(null); setOpen(true); }}>{t("clients.add")}</Button>
+          <Button type="button" className="h-10 w-full px-6 lg:w-auto" onClick={() => { setEditing(null); setOpen(true); }}>{t("clients.add")}</Button>
         </div>
       </Panel>
       {page.items.length === 0 ? <EmptyState>{t("clients.empty")}</EmptyState> : (
-        <Panel className="overflow-hidden p-0 md:p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-sm">
+        <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="w-[12%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.code")}</th>
-                  <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.name")}</th>
-                  <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.company")}</th>
-                  <th className="w-[12%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
-                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.date")}</th>
-                  <th className="w-[26%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
+                  <th className="w-[12%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.code")}</th>
+                  <th className="w-[18%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.name")}</th>
+                  <th className="w-[18%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.company")}</th>
+                  <th className="w-[12%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.status")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.date")}</th>
+                  <th className="w-[26%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.items.map((client) => (
                   <tr key={client.id} className="border-t border-[#550000]/10">
-                    <td className="numeric px-5 py-3 text-start">{client.code}</td>
-                    <td className="px-5 py-3 text-start">
-                      <Link className="font-medium text-primary" href={`/operations/clients/${client.id}`}>{client.name}</Link>
+                    <td className="numeric px-3 py-3 text-start whitespace-nowrap md:px-5">{client.code}</td>
+                    <td className="px-3 py-3 text-start md:px-5">
+                      <Link className="font-medium break-words text-primary" href={`/operations/clients/${client.id}`}>{client.name}</Link>
                     </td>
-                    <td className="px-5 py-3 text-start">{client.companyName || "—"}</td>
-                    <td className="px-5 py-3 text-start"><StatusBadge value={client.status} /></td>
-                    <td className="px-5 py-3 text-start"><DateText value={client.updatedAt} /></td>
-                    <td className="px-5 py-3 text-start">
+                    <td className="px-3 py-3 text-start break-words md:px-5">{client.companyName || "—"}</td>
+                    <td className="px-3 py-3 text-start md:px-5"><StatusBadge value={client.status} /></td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><DateText value={client.updatedAt} /></td>
+                    <td className="px-3 py-3 text-start md:px-5">
                       <div className="flex flex-wrap items-center gap-1">
                         <Button type="button" variant="outline" size="sm" render={<Link href={`/operations/clients/${client.id}`} />}>{t("common.view")}</Button>
                         <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(client); setOpen(true); }}>{t("common.edit")}</Button>
@@ -172,7 +172,7 @@ export function ClientForm({ open, client, onClose }: { open: boolean; client: C
 function StatusSelect({ value }: { value?: string }) {
   const { t } = useI18n();
   return (
-    <select className={`${controlClass} sm:w-48`} name="status" defaultValue={value ?? "all"} aria-label={t("fields.status")}>
+    <select className={`${controlClass} min-w-0 max-w-full`} name="status" defaultValue={value ?? "all"} aria-label={t("fields.status")}>
       <option value="all">{t("common.all")}</option>
       {(["active", "inactive", "potential", "archived"] as const).map((status) => (
         <option key={status} value={status}>{t(`status.${status}`)}</option>

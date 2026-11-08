@@ -173,9 +173,6 @@ export function Header() {
             <DropdownMenuSeparator />
             <p className="px-1.5 py-1 text-xs text-muted-foreground">{t(`roles.${user.role}`)}</p>
             <DropdownMenuSeparator />
-            <div className="px-1.5 py-1 sm:hidden">
-              <LanguageSwitcher />
-            </div>
             <DropdownMenuItem variant="destructive" onClick={() => void logout()}>
               <LogOut />
               {t("common.logout")}

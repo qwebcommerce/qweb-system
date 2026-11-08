@@ -64,7 +64,7 @@ export function Panel({ children, className }: { children: React.ReactNode; clas
 
 export function DataTable({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto">
+    <div className="min-w-0 overflow-x-auto">
       <table className="w-full min-w-[42rem] border-separate border-spacing-0 text-sm">{children}</table>
     </div>
   );

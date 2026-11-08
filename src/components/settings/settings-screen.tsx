@@ -64,16 +64,16 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
   }
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      <section className="rounded-xl bg-card p-5 ring-1 ring-foreground/10">
+    <div className="flex w-full min-w-0 flex-col gap-6">
+      <section className="min-w-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
         <h2 className="text-base font-semibold">{t("settings.preferences")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">{t("settings.languageHint")}</p>
-        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-          <div className="space-y-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="min-w-0 space-y-2">
             <Label htmlFor="user-language">{t("settings.yourLanguage")}</Label>
             <select
               id="user-language"
-              className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="h-10 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
               value={locale}
               onChange={(event) => setLocale(event.target.value as Locale)}
             >
@@ -81,11 +81,11 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
               <option value="ar">{t("common.arabic")}</option>
             </select>
           </div>
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2">
             <Label htmlFor="user-date">{t("settings.yourDateFormat")}</Label>
             <select
               id="user-date"
-              className="numeric h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+              className="numeric h-10 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
               value={dateFormat}
               onChange={(event) => setDateFormat(event.target.value as DateFormat)}
             >
@@ -94,23 +94,23 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
               <option value="MM/dd/yyyy">MM/dd/yyyy</option>
             </select>
           </div>
-          <div className="space-y-2">
+          <div className="min-w-0 space-y-2 sm:col-span-2 lg:col-span-1">
             <Label>{t("settings.yourTheme")}</Label>
-            <div className="flex h-10 items-center gap-2">
+            <div className="flex min-h-10 min-w-0 items-center gap-2">
               <ThemeToggle />
-              <span className="text-sm text-muted-foreground">{t("settings.themeHint")}</span>
+              <span className="min-w-0 text-sm break-words text-muted-foreground">{t("settings.themeHint")}</span>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-xl bg-card p-5 ring-1 ring-foreground/10">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+      <section className="min-w-0 rounded-xl bg-card p-4 ring-1 ring-foreground/10 sm:p-5">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="min-w-0">
             <h2 className="text-base font-semibold">{t("settings.company")}</h2>
             <p className="mt-1 text-sm leading-6 text-muted-foreground">{t("settings.companyHint")}</p>
           </div>
-          {!isAdmin ? <span className="text-xs text-muted-foreground">{t("settings.adminOnly")}</span> : null}
+          {!isAdmin ? <span className="shrink-0 text-xs text-muted-foreground">{t("settings.adminOnly")}</span> : null}
         </div>
 
         {isAdmin ? (
@@ -129,18 +129,18 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
             <FormField label={t("common.address")}>
               <Input className="h-10" {...form.register("address")} />
             </FormField>
-            <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <FormField label={t("common.currency")} error={form.formState.errors.currency ? t("validation.currency") : null}>
                 <Input className="numeric h-10 uppercase" maxLength={3} {...form.register("currency")} />
               </FormField>
               <FormField label={t("settings.defaultLanguage")}>
-                <select className="h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm" {...form.register("defaultLanguage")}>
+                <select className="h-10 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm" {...form.register("defaultLanguage")}>
                   <option value="en">{t("common.english")}</option>
                   <option value="ar">{t("common.arabic")}</option>
                 </select>
               </FormField>
               <FormField label={t("settings.dateFormat")}>
-                <select className="numeric h-10 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm" {...form.register("dateFormat")}>
+                <select className="numeric h-10 w-full min-w-0 max-w-full rounded-lg border border-input bg-transparent px-2.5 text-sm" {...form.register("dateFormat")}>
                   <option value="dd/MM/yyyy">dd/MM/yyyy</option>
                   <option value="yyyy-MM-dd">yyyy-MM-dd</option>
                   <option value="MM/dd/yyyy">MM/dd/yyyy</option>
@@ -155,13 +155,13 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
             </FormField>
             {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
             <div>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" className="w-full sm:w-auto" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? t("common.saving") : t("common.save")}
               </Button>
             </div>
           </form>
         ) : (
-          <dl className="mt-5 grid gap-3 text-sm sm:grid-cols-2">
+          <dl className="mt-5 grid min-w-0 gap-3 text-sm sm:grid-cols-2">
             <Info label={t("settings.company")} value={currentCompany.name} />
             <Info label={t("common.currency")} value={currentCompany.currency} numeric />
             <Info label={t("common.email")} value={currentCompany.email || "—"} />
@@ -184,7 +184,7 @@ function FormField({
   children: React.ReactNode;
 }) {
   return (
-    <label className="space-y-2">
+    <label className="min-w-0 space-y-2">
       <span className="text-sm font-medium">{label}</span>
       {children}
       {error ? <span className="block text-sm text-destructive">{error}</span> : null}
@@ -194,9 +194,9 @@ function FormField({
 
 function Info({ label, value, numeric = false }: { label: string; value: string; numeric?: boolean }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={numeric ? "numeric mt-1 font-medium" : "mt-1 font-medium"}>{value}</dd>
+      <dd className={numeric ? "numeric mt-1 font-medium break-words" : "mt-1 font-medium break-words"}>{value}</dd>
     </div>
   );
 }

@@ -9,6 +9,8 @@ import { flattenLinks, pathIsActive, visibleNavigation, type NavLink } from "@/c
 import { can } from "@/config/permissions";
 import { useI18n } from "@/components/providers/locale-provider";
 import { useCurrentUser } from "@/components/providers/user-provider";
+import { LanguageSwitcher } from "@/components/preferences/language-switcher";
+import { ThemeToggle } from "@/components/preferences/theme-toggle";
 import { Wordmark } from "@/components/brand/wordmark";
 import { cn } from "@/lib/utils";
 
@@ -120,7 +122,18 @@ export function Sidebar({
         })}
       </nav>
 
-      {!mobile ? (
+      {mobile ? (
+        <div className="flex items-center gap-2 border-t border-white/10 p-3">
+          <LanguageSwitcher
+            variant="ghost"
+            className="h-10 flex-1 justify-start rounded-lg px-2.5 text-white hover:bg-white/10 hover:text-white"
+          />
+          <ThemeToggle
+            variant="ghost"
+            className="size-10 rounded-lg text-white hover:bg-white/10 hover:text-white"
+          />
+        </div>
+      ) : (
         <div className="border-t border-white/10 p-3">
           <button
             type="button"
@@ -135,7 +148,7 @@ export function Sidebar({
             {!compact ? <span>{t("nav.collapse")}</span> : null}
           </button>
         </div>
-      ) : null}
+      )}
     </aside>
   );
 }

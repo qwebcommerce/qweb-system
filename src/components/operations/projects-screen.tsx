@@ -68,47 +68,47 @@ export function ProjectsScreen({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <Panel className="p-5 md:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center">
-          <form className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center" method="get">
-            <Input className="h-10 w-full sm:max-w-sm" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
-            <select className={`${controlClass} sm:w-48`} name="status" defaultValue={query.status ?? "all"} aria-label={t("fields.status")}>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <Panel className="p-4 sm:p-5 md:p-6">
+        <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center">
+          <form className="grid min-w-0 flex-1 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_12rem_auto] lg:items-center" method="get">
+            <Input className="h-10 w-full min-w-0 sm:col-span-2 lg:col-span-1" name="q" defaultValue={query.q ?? ""} placeholder={t("common.search")} aria-label={t("common.search")} />
+            <select className={`${controlClass} min-w-0 max-w-full`} name="status" defaultValue={query.status ?? "all"} aria-label={t("fields.status")}>
               <option value="all">{t("common.all")}</option>
               {(["pending", "in_progress", "on_hold", "completed", "cancelled"] as const).map((status) => (
                 <option key={status} value={status}>{t(`status.${status}`)}</option>
               ))}
             </select>
-            <Button type="submit" variant="outline" className="h-10 shrink-0 px-6">{t("common.search")}</Button>
+            <Button type="submit" variant="outline" className="h-10 w-full px-6 sm:col-span-2 lg:col-span-1 lg:w-auto">{t("common.search")}</Button>
           </form>
-          <Button type="button" className="h-10 shrink-0 px-6" onClick={() => { setEditing(null); setOpen(true); }}>{t("projects.add")}</Button>
+          <Button type="button" className="h-10 w-full px-6 lg:w-auto" onClick={() => { setEditing(null); setOpen(true); }}>{t("projects.add")}</Button>
         </div>
       </Panel>
       {page.items.length === 0 ? <EmptyState>{t("projects.empty")}</EmptyState> : (
-        <Panel className="overflow-hidden p-0 md:p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-sm">
+        <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[64rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="w-[10%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.code")}</th>
-                  <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.title")}</th>
-                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.client")}</th>
-                  <th className="w-[12%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.contractValue")}</th>
-                  <th className="w-[12%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.collected")}</th>
-                  <th className="w-[10%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
-                  <th className="w-[22%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
+                  <th className="w-[10%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.code")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.title")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.client")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.contractValue")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.collected")}</th>
+                  <th className="w-[12%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.status")}</th>
+                  <th className="w-[20%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {page.items.map((project) => (
                   <tr key={project.id} className="border-t border-[#550000]/10">
-                    <td className="numeric px-5 py-3 text-start">{project.code}</td>
-                    <td className="px-5 py-3 text-start"><Link className="font-medium text-primary" href={`/operations/projects/${project.id}`}>{project.title}</Link></td>
-                    <td className="px-5 py-3 text-start">{project.clientName}</td>
-                    <td className="px-5 py-3 text-start"><Money amount={project.contractValue} /></td>
-                    <td className="px-5 py-3 text-start"><Money amount={project.collectedAmount} /></td>
-                    <td className="px-5 py-3 text-start"><StatusBadge value={project.status} /></td>
-                    <td className="px-5 py-3 text-start">
+                    <td className="numeric px-3 py-3 text-start whitespace-nowrap md:px-5">{project.code}</td>
+                    <td className="px-3 py-3 text-start md:px-5"><Link className="font-medium break-words text-primary" href={`/operations/projects/${project.id}`}>{project.title}</Link></td>
+                    <td className="px-3 py-3 text-start break-words md:px-5">{project.clientName}</td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={project.contractValue} /></td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={project.collectedAmount} /></td>
+                    <td className="px-3 py-3 text-start md:px-5"><StatusBadge value={project.status} /></td>
+                    <td className="px-3 py-3 text-start md:px-5">
                       <div className="flex flex-wrap items-center gap-1">
                         <Button type="button" variant="outline" size="sm" render={<Link href={`/operations/projects/${project.id}`} />}>{t("common.view")}</Button>
                         <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(project); setOpen(true); }}>{t("common.edit")}</Button>
@@ -202,9 +202,9 @@ export function ProjectForm({
               {(["one_time", "monthly", "special"] as ContractType[]).map((type) => <option key={type} value={type}>{t(`status.${type}`)}</option>)}
             </select>
           </Field>
-          <Field label={t("fields.startDate")}><Input className="numeric h-10" type="date" {...form.register("startDate")} /></Field>
-          <Field label={t("fields.plannedDelivery")}><Input className="numeric h-10" type="date" {...form.register("plannedDeliveryDate")} /></Field>
-          <Field label={t("fields.actualDelivery")}><Input className="numeric h-10" type="date" {...form.register("actualDeliveryDate")} /></Field>
+          <Field label={t("fields.startDate")}><Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" {...form.register("startDate")} /></Field>
+          <Field label={t("fields.plannedDelivery")}><Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" {...form.register("plannedDeliveryDate")} /></Field>
+          <Field label={t("fields.actualDelivery")}><Input className="numeric h-10 w-full min-w-0 max-w-full" type="date" {...form.register("actualDeliveryDate")} /></Field>
           <Field label={t("fields.status")}>
             <select className={controlClass} {...form.register("status")}>
               {(["pending", "in_progress", "on_hold", "completed", "cancelled"] as ProjectStatus[]).map((status) => <option key={status} value={status}>{t(`status.${status}`)}</option>)}

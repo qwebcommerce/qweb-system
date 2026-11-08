@@ -413,6 +413,7 @@ export const en = {
     imageUrl: "Featured image URL",
     imageHint: "Paste an https image address. Files are not uploaded.",
     hint: "Both languages are stored on the same article. This does not publish a public website.",
+    deleteConfirm: "Delete this article?",
   },
   users: {
     add: "Add user",

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { authorized } from "@/server/actions/guard";
 import {
   createManagedUser,
+  deleteArticle,
   deleteCategory,
   dismissInboxItem,
   loadInbox,
@@ -96,6 +97,11 @@ export async function updateUserAction(id: string, input: unknown) {
 export async function deleteUserAction(id: string) {
   if (!id.trim()) return { ok: false, error: "invalid" } as const;
   return authorized("settings.manage", (user) => deleteManagedUser(user, id).then(() => null));
+}
+
+export async function deleteArticleAction(id: string) {
+  if (!id.trim()) return { ok: false, error: "invalid" } as const;
+  return authorized("articles.view", (user) => deleteArticle(user, id).then(() => null));
 }
 
 export async function saveArticleAction(input: unknown, id?: string) {

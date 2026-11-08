@@ -282,9 +282,9 @@ export async function saveArticle(
 ) {
   await live();
   const ref = id ? database().collection(collections.articles).doc(id) : database().collection(collections.articles).doc();
-  const en = cleanContent(input.en);
-  const ar = cleanContent(input.ar);
-  await assertSlugAvailable(ref.id, en.slug, ar.slug);
+  const slug = await uniqueSlug(ref.id, input.en.title);
+  const en = cleanContent(input.en, slug);
+  const ar = cleanContent(input.ar, slug);
   await database().runTransaction(async (tx) => {
     const existing = id ? await tx.get(ref) : null;
     if (id && !existing?.exists) throw new RecordError("not_found");
@@ -310,6 +310,24 @@ export async function saveArticle(
     }));
   });
   return ref.id;
+}
+
+export async function deleteArticle(user: SessionUser, id: string) {
+  await live();
+  const ref = database().collection(collections.articles).doc(id);
+  const existing = await ref.get();
+  if (!existing.exists) throw new RecordError("not_found");
+  const data = existing.data() ?? {};
+  await ref.delete();
+  await database().collection(collections.activityLogs).add(activityRecord({
+    userId: user.uid,
+    userName: user.displayName,
+    action: "article.deleted",
+    module: "articles",
+    recordId: id,
+    description: "Deleted an article.",
+    previousValues: { title: asText(data.en?.title), status: asText(data.status) },
+  }));
 }
 
 export async function listActivity() {
@@ -409,10 +427,10 @@ export async function dismissInboxItem(user: SessionUser, item: InboxItem) {
   }, { merge: true });
 }
 
-function cleanContent(content: Article["en"]): Article["en"] {
+function cleanContent(content: Article["en"], slug: string): Article["en"] {
   return {
     title: content.title.trim(),
-    slug: slugify(content.slug || content.title),
+    slug,
     excerpt: content.excerpt.trim(),
     content: sanitizeHtml(content.content),
     seoTitle: content.seoTitle.trim(),
@@ -425,15 +443,20 @@ function slugify(value: string) {
   return slug || "article";
 }
 
-async function assertSlugAvailable(id: string, enSlug: string, arSlug: string) {
+async function uniqueSlug(id: string, title: string) {
   await live();
+  const base = slugify(title);
   const collection = database().collection(collections.articles);
-  const [en, ar] = await Promise.all([
-    collection.where("en.slug", "==", enSlug).limit(2).get(),
-    collection.where("ar.slug", "==", arSlug).limit(2).get(),
-  ]);
-  const clash = [...en.docs, ...ar.docs].some((doc) => doc.id !== id);
-  if (clash) throw new RecordError("conflict");
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base.slice(0, 76)}-${attempt + 1}`;
+    const [en, ar] = await Promise.all([
+      collection.where("en.slug", "==", candidate).limit(2).get(),
+      collection.where("ar.slug", "==", candidate).limit(2).get(),
+    ]);
+    const taken = [...en.docs, ...ar.docs].some((doc) => doc.id !== id);
+    if (!taken) return candidate;
+  }
+  throw new RecordError("conflict");
 }
 
 function isEmailInUse(error: unknown) {

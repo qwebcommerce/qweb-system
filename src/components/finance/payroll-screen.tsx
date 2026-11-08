@@ -24,38 +24,38 @@ export function PayrollScreen({ rows, month, accounts }: { rows: Payroll[]; mont
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("payroll.paidHint")}</p>
-      <Panel className="p-5 md:p-6">
-        <form className="flex flex-col gap-4 sm:flex-row sm:items-end" onSubmit={(event) => { event.preventDefault(); void generate(new FormData(event.currentTarget)); }}>
-          <div className="w-full sm:w-48">
-            <Field label={t("fields.month")}><Input className="numeric h-10 w-full" type="month" name="month" defaultValue={month} /></Field>
+      <Panel className="p-4 sm:p-5 md:p-6">
+        <form className="grid grid-cols-1 gap-3 sm:flex sm:items-end" onSubmit={(event) => { event.preventDefault(); void generate(new FormData(event.currentTarget)); }}>
+          <div className="min-w-0 sm:w-48">
+            <Field label={t("fields.month")}><Input className="numeric h-10 w-full min-w-0 max-w-full" type="month" name="month" defaultValue={month} /></Field>
           </div>
-          <Button type="submit" className="h-10 shrink-0 px-6">{t("payroll.generate")}</Button>
+          <Button type="submit" className="h-10 w-full px-6 sm:w-auto">{t("payroll.generate")}</Button>
         </form>
         {error ? <p className="mt-4 text-sm text-destructive">{error}</p> : null}
       </Panel>
       {rows.length === 0 ? <EmptyState>{t("payroll.empty")}</EmptyState> : (
-        <Panel className="overflow-hidden p-0 md:p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed border-collapse text-sm">
+        <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[48rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="w-[22%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.employee")}</th>
-                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.totalPayable")}</th>
-                  <th className="w-[14%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
-                  <th className="w-[16%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.paidOn")}</th>
-                  <th className="w-[32%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
+                  <th className="w-[22%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.employee")}</th>
+                  <th className="w-[18%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.totalPayable")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.status")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.paidOn")}</th>
+                  <th className="w-[30%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id} className="border-t border-[#550000]/10">
-                    <td className="px-5 py-3 text-start font-medium">{row.employeeName}</td>
-                    <td className="px-5 py-3 text-start"><Money amount={row.totalPayable} /></td>
-                    <td className="px-5 py-3 text-start"><StatusBadge value={row.status} /></td>
-                    <td className="px-5 py-3 text-start"><DateText value={row.paymentDate} /></td>
-                    <td className="px-5 py-3 text-start">
+                    <td className="px-3 py-3 text-start font-medium break-words md:px-5">{row.employeeName}</td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={row.totalPayable} /></td>
+                    <td className="px-3 py-3 text-start md:px-5"><StatusBadge value={row.status} /></td>
+                    <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><DateText value={row.paymentDate} /></td>
+                    <td className="px-3 py-3 text-start md:px-5">
                       <div className="flex flex-wrap items-center gap-1">
                         <Button type="button" variant="outline" size="sm" onClick={() => setViewing(row)}>{t("common.view")}</Button>
                         {row.status !== "paid" ? <Button type="button" size="sm" variant="outline" onClick={() => setEditing(row)}>{t("common.edit")}</Button> : null}
@@ -126,9 +126,9 @@ function Lines({ label, lines }: { label: string; lines: LineAmount[] }) {
         {lines.length === 0 ? "—" : (
           <ul className="space-y-1">
             {lines.map((line) => (
-              <li key={line.id} className="flex items-baseline justify-between gap-4">
-                <span>{line.title || "—"}{line.notes ? <span className="text-muted-foreground"> · {line.notes}</span> : null}</span>
-                <Money amount={line.amount} />
+              <li key={line.id} className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 break-words">{line.title || "—"}{line.notes ? <span className="text-muted-foreground"> · {line.notes}</span> : null}</span>
+                <span className="shrink-0"><Money amount={line.amount} /></span>
               </li>
             ))}
           </ul>
@@ -189,7 +189,7 @@ function LineEditor({ label, lines, onChange, onAdd }: { label: string; lines: L
     <div className="space-y-2">
       <div className="flex items-center justify-between"><span className="text-sm font-medium">{label}</span><Button type="button" size="sm" variant="outline" onClick={onAdd}>{t("common.add")}</Button></div>
       {lines.map((line) => (
-        <div key={line.id} className="grid grid-cols-[1fr_8rem] gap-2">
+        <div key={line.id} className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-[minmax(0,1fr)_8rem]">
           <Input value={line.title} placeholder={t("payroll.lineTitle")} onChange={(event) => onChange(lines.map((item) => item.id === line.id ? { ...item, title: event.target.value } : item))} />
           <Input className="numeric" type="number" min="0" step="0.01" value={line.amount} onChange={(event) => onChange(lines.map((item) => item.id === line.id ? { ...item, amount: Number(event.target.value) } : item))} />
         </div>

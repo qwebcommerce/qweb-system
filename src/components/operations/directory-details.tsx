@@ -24,13 +24,13 @@ export function ClientDetail({
   const [tab, setTab] = useState<"projects" | "revenue" | "tasks">("projects");
   const [editing, setEditing] = useState(false);
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="numeric text-sm text-muted-foreground">{client.code}</p>
-          <h2 className="text-xl font-semibold">{client.name}</h2>
+          <h2 className="break-words text-xl font-semibold">{client.name}</h2>
         </div>
-        <Button type="button" variant="outline" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
       </div>
       <Panel>
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
@@ -48,16 +48,16 @@ export function ClientDetail({
           </div>
         </dl>
       </Panel>
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex min-w-0 gap-2 overflow-x-auto pb-1">
         {(["projects", "revenue", "tasks"] as const).map((item) => (
-          <Button key={item} type="button" size="sm" variant={tab === item ? "default" : "outline"} onClick={() => setTab(item)}>
+          <Button key={item} type="button" size="sm" className="shrink-0" variant={tab === item ? "default" : "outline"} onClick={() => setTab(item)}>
             {t(`clients.${item}`)}
           </Button>
         ))}
       </div>
       {tab === "projects" ? <Links rows={projects.map((project) => ({ id: project.id, href: `/operations/projects/${project.id}`, title: project.title, extra: project.status }))} empty={t("projects.empty")} /> : null}
       {tab === "revenue" ? (
-        <Panel>
+        <Panel className="min-w-0 overflow-hidden">
           <DataTable>
             <tbody>
               {revenue.map((item) => (
@@ -82,14 +82,14 @@ export function EmployeeDetail({ employee, tasks }: { employee: Employee; tasks:
   const { t } = useI18n();
   const [editing, setEditing] = useState(false);
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
           <p className="numeric text-sm text-muted-foreground">{employee.code}</p>
-          <h2 className="text-xl font-semibold">{employee.fullName}</h2>
-          <p className="text-sm text-muted-foreground">{employee.position}</p>
+          <h2 className="break-words text-xl font-semibold">{employee.fullName}</h2>
+          <p className="break-words text-sm text-muted-foreground">{employee.position}</p>
         </div>
-        <Button type="button" variant="outline" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
+        <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => setEditing(true)}>{t("common.edit")}</Button>
       </div>
       <Panel>
         <dl className="grid gap-4 text-sm sm:grid-cols-2">
@@ -123,7 +123,7 @@ export function EmployeeDetail({ employee, tasks }: { employee: Employee; tasks:
       <Panel>
         <h3 className="mb-3 font-medium">{t("nav.tasks")}</h3>
         <ul className="space-y-2 text-sm">
-          {tasks.map((task) => <li key={task.id} className="flex justify-between gap-3"><span>{task.description}</span><StatusBadge value={task.status} /></li>)}
+          {tasks.map((task) => <li key={task.id} className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3"><span className="min-w-0 break-words">{task.description}</span><StatusBadge value={task.status} /></li>)}
           {tasks.length === 0 ? <li className="text-muted-foreground">{t("tasks.empty")}</li> : null}
         </ul>
       </Panel>
@@ -133,7 +133,7 @@ export function EmployeeDetail({ employee, tasks }: { employee: Employee; tasks:
 }
 
 function Info({ label, value }: { label: string; value: string }) {
-  return <div><dt className="text-muted-foreground">{label}</dt><dd className="mt-1">{value || "—"}</dd></div>;
+  return <div className="min-w-0"><dt className="text-muted-foreground">{label}</dt><dd className="mt-1 break-words">{value || "—"}</dd></div>;
 }
 
 function Links({ rows, empty }: { rows: Array<{ id: string; href: string; title: string; extra: string }>; empty: string }) {
@@ -141,8 +141,8 @@ function Links({ rows, empty }: { rows: Array<{ id: string; href: string; title:
     <Panel>
       <ul className="space-y-2 text-sm">
         {rows.map((row) => (
-          <li key={row.id} className="flex items-center justify-between gap-3">
-            <Link className="text-primary" href={row.href}>{row.title}</Link>
+          <li key={row.id} className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <Link className="min-w-0 break-words text-primary" href={row.href}>{row.title}</Link>
             <StatusBadge value={row.extra} />
           </li>
         ))}

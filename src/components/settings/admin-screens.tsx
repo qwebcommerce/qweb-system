@@ -21,21 +21,21 @@ export function CategoriesScreen({ groups }: { groups: Record<CategoryKind, Cate
   const [open, setOpen] = useState(false);
   const rows = groups[kind];
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <div className="flex flex-wrap gap-2">
         {kinds.map((item) => (
           <Button key={item} type="button" size="sm" variant={kind === item ? "default" : "outline"} onClick={() => setKind(item)}>{t(`categories.${item}`)}</Button>
         ))}
       </div>
-      <div className="flex justify-end"><Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>{t("categories.add")}</Button></div>
+      <div className="flex sm:justify-end"><Button type="button" className="h-10 w-full px-6 sm:w-auto" onClick={() => { setEditing(null); setOpen(true); }}>{t("categories.add")}</Button></div>
       {rows.length === 0 ? <EmptyState>{t("categories.empty")}</EmptyState> : (
-        <Panel>
+        <Panel className="min-w-0">
           <ul className="divide-y divide-border">
             {rows.map((category) => (
-              <li key={category.id} className="flex items-center justify-between gap-3 py-3">
-                <button type="button" className="text-start font-medium" onClick={() => { setEditing(category); setOpen(true); }}>{localizedName(category.name, locale)}</button>
-                {category.systemKey ? <span className="text-xs text-muted-foreground">{t("categories.system")}</span> : (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => void deleteCategoryAction(kind, category.id).then(() => window.location.reload())}>{t("common.delete")}</Button>
+              <li key={category.id} className="flex min-w-0 flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <button type="button" className="min-w-0 break-words text-start font-medium" onClick={() => { setEditing(category); setOpen(true); }}>{localizedName(category.name, locale)}</button>
+                {category.systemKey ? <span className="shrink-0 text-xs text-muted-foreground">{t("categories.system")}</span> : (
+                  <Button type="button" variant="ghost" size="sm" className="w-full shrink-0 sm:w-auto" onClick={() => void deleteCategoryAction(kind, category.id).then(() => window.location.reload())}>{t("common.delete")}</Button>
                 )}
               </li>
             ))}
@@ -94,30 +94,30 @@ export function UsersScreen({ users, employees }: { users: UserProfile[]; employ
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
-      <div className="flex justify-end"><Button type="button" onClick={() => edit(null)}>{t("users.add")}</Button></div>
+    <div className="flex w-full min-w-0 flex-col gap-4">
+      <div className="flex sm:justify-end"><Button type="button" className="h-10 w-full px-6 sm:w-auto" onClick={() => edit(null)}>{t("users.add")}</Button></div>
       {users.length === 0 ? <EmptyState>{t("users.empty")}</EmptyState> : (
-        <Panel className="overflow-hidden p-0 md:p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-sm">
+        <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[48rem] table-fixed border-collapse text-sm">
               <thead>
                 <tr>
-                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.name")}</th>
-                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.email")}</th>
-                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.role")}</th>
-                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("fields.status")}</th>
-                  <th className="bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("common.actions")}</th>
+                  <th className="w-[22%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.name")}</th>
+                  <th className="w-[28%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.email")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.role")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.status")}</th>
+                  <th className="w-[20%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
                   <tr key={user.uid} className="border-t border-[#550000]/10">
-                    <td className="px-5 py-3 text-start font-medium">{user.displayName}</td>
-                    <td className="px-5 py-3 text-start">{user.email}</td>
-                    <td className="px-5 py-3 text-start">{t(`roles.${user.role}`)}</td>
-                    <td className="px-5 py-3 text-start"><StatusBadge value={user.active ? "active" : "inactive"} /></td>
-                    <td className="px-5 py-3 text-start">
-                      <div className="flex items-center gap-1">
+                    <td className="px-3 py-3 text-start font-medium break-words md:px-5">{user.displayName}</td>
+                    <td className="px-3 py-3 text-start break-all md:px-5">{user.email}</td>
+                    <td className="px-3 py-3 text-start break-words md:px-5">{t(`roles.${user.role}`)}</td>
+                    <td className="px-3 py-3 text-start md:px-5"><StatusBadge value={user.active ? "active" : "inactive"} /></td>
+                    <td className="px-3 py-3 text-start md:px-5">
+                      <div className="flex flex-wrap items-center gap-1">
                         <Button type="button" variant="outline" size="sm" onClick={() => edit(user)}>{t("common.edit")}</Button>
                         {user.uid === current.uid ? null : (
                           <Button type="button" variant="ghost" size="sm" onClick={() => setRemoving(user)}>{t("common.delete")}</Button>
@@ -199,24 +199,24 @@ export function ActivityScreen({ rows }: { rows: Array<{ id: string; userName: s
   const { t } = useI18n();
   if (rows.length === 0) return <EmptyState>{t("activity.empty")}</EmptyState>;
   return (
-    <Panel className="overflow-hidden p-0 md:p-0">
-      <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse text-sm">
+    <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+      <div className="min-w-0 overflow-x-auto">
+        <table className="w-full min-w-[44rem] table-fixed border-collapse text-sm">
           <thead>
             <tr>
-              <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.when")}</th>
-              <th className="w-[22%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.who")}</th>
-              <th className="w-[18%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.module")}</th>
-              <th className="w-[42%] bg-[#550000] px-5 py-3 text-start font-medium text-white">{t("activity.action")}</th>
+              <th className="w-[20%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("activity.when")}</th>
+              <th className="w-[22%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("activity.who")}</th>
+              <th className="w-[18%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("activity.module")}</th>
+              <th className="w-[40%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("activity.action")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => (
               <tr key={row.id} className="border-t border-[#550000]/10">
-                <td className="px-5 py-3 text-start whitespace-nowrap"><DateText value={row.createdAt} /></td>
-                <td className="px-5 py-3 text-start">{row.userName}</td>
-                <td className="px-5 py-3 text-start">{row.module}</td>
-                <td className="px-5 py-3 text-start">{row.description}</td>
+                <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><DateText value={row.createdAt} /></td>
+                <td className="px-3 py-3 text-start break-words md:px-5">{row.userName}</td>
+                <td className="px-3 py-3 text-start break-words md:px-5">{row.module}</td>
+                <td className="px-3 py-3 text-start break-words md:px-5">{row.description}</td>
               </tr>
             ))}
           </tbody>

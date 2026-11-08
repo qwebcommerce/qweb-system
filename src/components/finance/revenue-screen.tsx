@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  DataTable,
   DateText,
   DialogActions,
   EditorDialog,
@@ -87,24 +86,34 @@ export function RevenueScreen({
   }
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full min-w-0 flex-col gap-4">
       <p className="text-sm leading-6 text-muted-foreground">{t("revenue.hint")}</p>
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" onClick={() => void exportRows()}>{t("common.export")}</Button>
-        <Button type="button" onClick={() => { setEditing(null); setOpen(true); }}>{t("revenue.add")}</Button>
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+        <Button type="button" variant="outline" className="h-10 w-full sm:w-auto" onClick={() => void exportRows()}>{t("common.export")}</Button>
+        <Button type="button" className="h-10 w-full sm:w-auto" onClick={() => { setEditing(null); setOpen(true); }}>{t("revenue.add")}</Button>
       </div>
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
       {page.items.length === 0 ? <EmptyState>{t("revenue.empty")}</EmptyState> : (
-        <Panel>
-          <DataTable>
-            <tbody>
+        <Panel className="min-w-0 overflow-hidden p-0 md:p-0">
+          <div className="min-w-0 overflow-x-auto">
+            <table className="w-full min-w-[52rem] table-fixed border-collapse text-sm">
+              <thead>
+                <tr>
+                  <th className="w-[28%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.description")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.date")}</th>
+                  <th className="w-[16%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.amount")}</th>
+                  <th className="w-[14%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("fields.status")}</th>
+                  <th className="w-[26%] bg-[#550000] px-3 py-3 text-start font-medium text-white md:px-5">{t("common.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
               {page.items.map((item) => (
-                <tr key={item.id} className="border-t border-border">
-                  <td className="px-2 py-3 font-medium">{item.description}</td>
-                  <td className="px-2 py-3"><DateText value={item.date} /></td>
-                  <td className="px-2 py-3"><Money amount={item.amount} /></td>
-                  <td className="px-2 py-3"><StatusBadge value={item.status} /></td>
-                  <td className="px-2 py-3">
+                <tr key={item.id} className="border-t border-[#550000]/10">
+                  <td className="px-3 py-3 text-start font-medium break-words md:px-5">{item.description}</td>
+                  <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><DateText value={item.date} /></td>
+                  <td className="px-3 py-3 text-start whitespace-nowrap md:px-5"><Money amount={item.amount} /></td>
+                  <td className="px-3 py-3 text-start md:px-5"><StatusBadge value={item.status} /></td>
+                  <td className="px-3 py-3 text-start md:px-5">
                     <div className="flex flex-wrap items-center gap-1">
                       <Button type="button" variant="outline" size="sm" onClick={() => { setEditing(item); setOpen(true); }}>{t("common.edit")}</Button>
                       {item.status === "received" ? <Button type="button" variant="ghost" size="sm" onClick={() => setPending({ item, mode: "cancel" })}>{t("revenue.cancel")}</Button> : null}
@@ -113,9 +122,12 @@ export function RevenueScreen({
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </DataTable>
-          <Pager cursor={page.nextCursor} query={query} />
+              </tbody>
+            </table>
+          </div>
+          <div className="px-3 pb-4 md:px-5">
+            <Pager cursor={page.nextCursor} query={query} />
+          </div>
         </Panel>
       )}
       {open ? <RevenueForm key={editing?.id ?? "new"} revenue={editing} categories={categories} clients={clients} projects={projects} accounts={accounts} onClose={() => setOpen(false)} /> : null}
