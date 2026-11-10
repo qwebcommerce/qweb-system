@@ -5,9 +5,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import { SIDEBAR_STORAGE_KEY } from "@/config/session";
-import { flattenLinks, pathIsActive, visibleNavigation, type NavLink } from "@/config/navigation";
-import { can } from "@/config/permissions";
+import { allowedNavigation, flattenLinks, pathIsActive, type NavLink } from "@/config/navigation";
+import type { Role } from "@/types";
+import type { RoleGrants } from "@/config/permissions";
 import { useI18n } from "@/components/providers/locale-provider";
+import { useRoleGrants } from "@/components/providers/permissions-provider";
 import { useCurrentUser } from "@/components/providers/user-provider";
 import { LanguageSwitcher } from "@/components/preferences/language-switcher";
 import { ThemeToggle } from "@/components/preferences/theme-toggle";
@@ -26,7 +28,7 @@ export function Sidebar({
   const user = useCurrentUser();
   const collapsed = useSyncExternalStore(subscribeSidebar, readCollapsed, () => false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
-  const entries = visibleNavigation((permission) => can(user.role, permission));
+  const entries = allowedNavigation(user.role, useRoleGrants());
 
   function toggleCollapsed() {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(!collapsed));
@@ -204,6 +206,6 @@ function readCollapsed() {
   return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
 }
 
-export function pageLinksFor(role: Parameters<typeof can>[0]) {
-  return flattenLinks(visibleNavigation((permission) => can(role, permission)));
+export function pageLinksFor(role: Role, grants: RoleGrants) {
+  return flattenLinks(allowedNavigation(role, grants));
 }

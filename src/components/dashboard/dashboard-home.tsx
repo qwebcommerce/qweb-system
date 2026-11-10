@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { pageLinksFor } from "@/components/layout/sidebar";
+import { useRoleGrants } from "@/components/providers/permissions-provider";
 import { useCurrentUser } from "@/components/providers/user-provider";
 import { useI18n } from "@/components/providers/locale-provider";
 
 export function DashboardHome() {
   const user = useCurrentUser();
   const { t } = useI18n();
-  const links = pageLinksFor(user.role).filter((link) => link.href !== "/dashboard");
+  const links = pageLinksFor(user.role, useRoleGrants()).filter((link) => link.href !== "/dashboard");
 
   return (
     <div className="flex w-full flex-col gap-8">

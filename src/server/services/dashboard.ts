@@ -2,6 +2,7 @@ import "server-only";
 import type { DocumentData } from "firebase-admin/firestore";
 import { collections } from "@/config/collections";
 import { can } from "@/config/permissions";
+import { getRoleGrants } from "@/server/services/permissions";
 import { addIsoDays, eachMonth, monthKey, periodRange, qatarToday, type Period } from "@/lib/dates";
 import {
   applyAccountEntry,
@@ -50,8 +51,9 @@ export async function loadDashboard(
 ): Promise<DashboardData> {
   await live();
   const range = periodRange(period, custom);
-  const tasks = await loadTasks(user);
-  if (!can(user.role, "finance.view")) {
+  const grants = await getRoleGrants();
+  const tasks = can(user.role, "tasks.view", grants) ? await loadTasks(user) : [];
+  if (!can(user.role, "finance.view", grants)) {
     return {
       kind: "staff",
       range,

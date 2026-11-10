@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { can } from "@/config/permissions";
+import { useCan } from "@/components/providers/permissions-provider";
 import { updateCompanySettings } from "@/server/actions/settings";
 import { useCompany, useDateFormat } from "@/components/providers/company-provider";
 import { useI18n } from "@/components/providers/locale-provider";
@@ -34,7 +34,7 @@ export function SettingsScreen({ company }: { company: CompanySettings }) {
   const user = useCurrentUser();
   const currentCompany = useCompany();
   const { dateFormat, setDateFormat } = useDateFormat();
-  const isAdmin = can(user.role, "settings.manage");
+  const isAdmin = useCan()("settings.manage");
   const [formError, setFormError] = useState<string | null>(null);
   const form = useForm<CompanyValues>({
     resolver: zodResolver(schema),

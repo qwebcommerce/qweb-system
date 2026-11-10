@@ -5,6 +5,7 @@ import { qatarToday } from "@/lib/dates";
 import { sanitizeHtml } from "@/lib/html";
 import { getAdminAuth } from "@/lib/firebase/admin";
 import { can } from "@/config/permissions";
+import { getRoleGrants } from "@/server/services/permissions";
 import { asIso, asNullable, asNumber, asText, database, live, stamp } from "@/server/db";
 import { activityRecord } from "@/server/services/activity";
 import { RecordError, staffEmployeeId } from "@/server/services/directory";
@@ -357,7 +358,8 @@ export async function loadInbox(user: SessionUser): Promise<InboxItem[]> {
   const today = qatarToday();
   const items: InboxItem[] = [];
   const db = database();
-  if (can(user.role, "finance.view")) {
+  const grants = await getRoleGrants();
+  if (can(user.role, "finance.view", grants)) {
     const [overdue, projects, payroll] = await Promise.all([
       db.collection(collections.expenses).where("status", "==", "overdue").limit(12).get(),
       db.collection(collections.projects).where("status", "in", ["pending", "in_progress", "on_hold"]).limit(40).get(),
@@ -389,7 +391,7 @@ export async function loadInbox(user: SessionUser): Promise<InboxItem[]> {
       });
     }
   }
-  if (can(user.role, "tasks.view")) {
+  if (can(user.role, "tasks.view", grants)) {
     const employeeId = await staffEmployeeId(user);
     const taskQuery = user.role === "staff" && employeeId
       ? db.collection(collections.tasks).where("assignedToId", "==", employeeId).limit(80)

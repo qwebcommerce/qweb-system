@@ -11,6 +11,7 @@ import {
   PieChart,
   Receipt,
   Settings,
+  ShieldCheck,
   SlidersHorizontal,
   Tags,
   TrendingUp,
@@ -19,7 +20,8 @@ import {
   Wallet,
   type LucideIcon,
 } from "lucide-react";
-import type { Permission } from "@/config/permissions";
+import { can, type Permission, type RoleGrants } from "@/config/permissions";
+import type { Role } from "@/types";
 import type { MessageKey } from "@/i18n";
 
 export interface NavLink {
@@ -199,6 +201,15 @@ export const navigation: NavEntry[] = [
         permission: "settings.manage",
         phase: 1,
       },
+      {
+        kind: "link",
+        href: "/settings/permissions",
+        labelKey: "nav.permissions",
+        descriptionKey: "permissions.hint",
+        icon: ShieldCheck,
+        permission: "settings.manage",
+        phase: 1,
+      },
     ],
   },
 ];
@@ -209,6 +220,17 @@ export function visibleNavigation(canAccess: (permission: Permission) => boolean
       return canAccess(entry.permission) ? [entry] : [];
     }
     const children = entry.children.filter((child) => canAccess(child.permission));
+    if (children.length === 0) return [];
+    const group: NavGroup = { ...entry, children };
+    return [group];
+  });
+}
+
+export function allowedNavigation(role: Role, grants: RoleGrants): NavEntry[] {
+  const entries = visibleNavigation((permission) => can(role, permission, grants));
+  return entries.flatMap((entry): NavEntry[] => {
+    if (entry.kind === "link") return [entry];
+    const children = entry.children.filter((child) => child.href !== "/settings/permissions" || role === "administrator");
     if (children.length === 0) return [];
     const group: NavGroup = { ...entry, children };
     return [group];

@@ -6,11 +6,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Menu, Search } from "lucide-react";
 import { NotificationMenu } from "@/components/layout/notification-menu";
 import { toast } from "sonner";
-import { findPage, flattenLinks, visibleNavigation } from "@/config/navigation";
-import { can } from "@/config/permissions";
+import { allowedNavigation, findPage, flattenLinks } from "@/config/navigation";
 import { LanguageSwitcher } from "@/components/preferences/language-switcher";
 import { ThemeToggle } from "@/components/preferences/theme-toggle";
 import { useI18n } from "@/components/providers/locale-provider";
+import { useRoleGrants } from "@/components/providers/permissions-provider";
 import { useCurrentUser } from "@/components/providers/user-provider";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -44,7 +44,7 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [query, setQuery] = useState("");
   const page = findPage(pathname);
-  const links = flattenLinks(visibleNavigation((permission) => can(user.role, permission))).filter(
+  const links = flattenLinks(allowedNavigation(user.role, useRoleGrants())).filter(
     (link) => link.href !== "/dashboard",
   );
   const results = useMemo(() => {

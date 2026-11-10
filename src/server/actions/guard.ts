@@ -2,6 +2,7 @@ import "server-only";
 import { can, type Permission } from "@/config/permissions";
 import { getSessionUser } from "@/server/auth/session";
 import { RecordError } from "@/server/services/directory";
+import { getRoleGrants } from "@/server/services/permissions";
 import type { SessionUser } from "@/types";
 
 export type ActionError = "invalid" | "forbidden" | "not_found" | "conflict" | "linked" | "failed";
@@ -13,7 +14,7 @@ export async function authorized<T>(
 ): Promise<ActionResult<T>> {
   const user = await getSessionUser();
   if (!user) return { ok: false, error: "forbidden" };
-  if (permission && !can(user.role, permission)) return { ok: false, error: "forbidden" };
+  if (permission && !can(user.role, permission, await getRoleGrants())) return { ok: false, error: "forbidden" };
   try {
     return { ok: true, data: await action(user) };
   } catch (error) {
